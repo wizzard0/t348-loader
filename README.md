@@ -1,18 +1,19 @@
 # t348-loader
-isomorphic (browser, node) TypeScript / JavaScript loader
+isomorphic (browser/node) TypeScript / JavaScript loader
 
 ## Supported Features
 
 - ESM, TypeScript 4.4, JavaScript (ES2021)
-- Isomorphic (browser, node), zero dependencies, 321K of readable JS
+- Single file, zero dependencies, 321K of readable JS
 - Stack traces
 - Module packaging/publishing (incomplete)
 
 ## Unsupported features
 
 - CommonJS, JSX, TSX
-- import cycles (use [madge] to get rid of them, it makes the code cleaner anyway)
-- type checking (use the full `tsc` for that)
+- Import cycles (use [madge] to get rid of them, it makes the code cleaner anyway)
+- Type checking (use the full `tsc` for that)
+- see [TODO](#todo)
 
 ## Usage 
 
@@ -23,7 +24,7 @@ isomorphic (browser, node) TypeScript / JavaScript loader
 
 ### Browsers (ESM only)
 
-1. Add the following to your `HTML`:
+1. Add the following to your HTML:
 
 ```html
 <head>
@@ -49,16 +50,17 @@ node t348.mjs t348pack yourModule.js
 
 ```js
 import { yourFunction } from 't0aAa1bBb2.js' // will try to resolve from FS first, then from global repo
-```
+``` 
 
 ## How it works
 
 Transpiling: manually stripped down [sucrase]@3.21.0
 
-TODO 
-- more details
+### todo
+- more docs/examples
 - automate sucrase feature removal, update to latest version
 - bring JSX back? (I don't need it. Use [naked-preact] instead)
+- publish module repo and make it more web-scale lol
 - more tests
 
 ## Detect cycles
