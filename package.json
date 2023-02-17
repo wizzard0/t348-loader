@@ -1,0 +1,20 @@
+{
+  "name": "t348-loader",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "TEST=1 node --experimental-loader=./t348.mjs tests/b.js",
+    "test-sha": "TEST=1 node --experimental-loader=./t348.mjs tests/ttt.js",
+    "test-quiet": "node --experimental-loader=./t348.mjs tests/b.js",
+    "test-pack": "TEST=1 node ./t348.mjs t348pack",
+    "pack": "node ./t348.mjs t348pack",
+    "serve": "cp t348.mjs tests && npx http-server -p17348 -c-1 tests"
+  },
+  "keywords": [],
+  "t348": {
+    "repo": "./web/t348repo/t0$HASH.ts"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}

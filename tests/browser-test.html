@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="t348.mjs" type="module" data-global-repo="./t348repo/t0$HASH.ts"></script>
+    <script type="text/typescript">
+        import {c} from './t0WYgtLgML.js';
+        import {d} from 'http://127.0.0.1:7348/repo/t0vmorhxrU.js';
+
+        console.log({c,d,http:1});
+        let a: number = 100500;
+        let btn: HTMLButtonElement = document.querySelector('#setTrace');
+        let clicker = e => {
+            console.log('wat',e);
+            localStorage.t348_trace=1;
+            location.reload();
+        };
+        btn.addEventListener('click', clicker);
+        document.querySelector('#doner').innerHTML = '<b>LOAD rly DONE!</b>';
+    </script>
+    <style>pre{background:lightgray}</style>
+</head>
+<body>
+<h3>t348 loader</h3>
+<p>see console!</p>
+<div><button id="setTrace">set</button> <pre>localStorage.t348_trace=1</pre> and refresh for more spam in console</div>
+<div id="doner"></div>
+</body>
+</html>
