@@ -22,7 +22,7 @@ isomorphic (browser/node) TypeScript / JavaScript loader
 1. Copy t348.mjs to your project
 2. Use `node --experimental-loader=./t348.mjs your-app.ts [args]` to launch your application
 
-### Browsers (ESM only)
+### Browsers
 
 1. Add the following to your HTML:
 
