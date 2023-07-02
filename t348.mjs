@@ -1,5 +1,6 @@
 // https://github.com/wizzard0/t348-loader CHANGELOG
 // MIT license. Includes code from https://github.com/alangpierce/sucrase and https://github.com/paulmillr/noble-hashes
+// p3702: node20 support
 // p3217: public release
 // p3115: resolve "./something" -> "./something.ts" too
 // p2a22: path in syntax error message
@@ -380,7 +381,7 @@ function buildGlobalUrl(hash) {
   // data-global-repo="./t348repo/t0$HASH.ts"
   // noinspection JSUnresolvedVariable
   let {T348_GLOBAL_REPO, GLOBAL_REPO}=imports().env;
-  let url = T348_GLOBAL_REPO || GLOBAL_REPO || "https://localhost/t0$HASH.js";
+  let url = T348_GLOBAL_REPO || GLOBAL_REPO || "t348:t0$HASH.js"; // was "https://localhost/t0$HASH.js" but that was causing ERR_NETWORK_IMPORT_DISALLOWED
   return url.replace('$HASH', hash)
 }
 
