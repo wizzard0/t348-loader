@@ -1,5 +1,6 @@
 // https://github.com/wizzard0/t348-loader CHANGELOG
 // MIT license. Includes code from https://github.com/alangpierce/sucrase and https://github.com/paulmillr/noble-hashes
+// p4804: url in 404 msg
 // p3702: node20 support
 // p3217: public release
 // p3115: resolve "./something" -> "./something.ts" too
@@ -437,7 +438,7 @@ async function loadAndMaybeCache(hash, transpiler) {
 function miniGet(url) {
   let{secureGet,get}=imports();
   if(!secureGet){
-    return fetch(url).then(response => response.status<300? response.text():err(`cannot fetch: ${response.status} ${response.statusText}`, {code:response.status===404?'ENOENT':'EIO'}))
+    return fetch(url).then(response => response.status<300? response.text():err(`cannot fetch ${url}: ${response.status} ${response.statusText}`, {code:response.status===404?'ENOENT':'EIO'}))
   }
   return new Promise((resolve, reject) => {
     let getter = url.startsWith('https://') ? secureGet : get;
