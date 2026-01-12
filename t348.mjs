@@ -1,5 +1,6 @@
 // https://github.com/wizzard0/t348-loader CHANGELOG
 // MIT license. Includes code from https://github.com/alangpierce/sucrase and https://github.com/paulmillr/noble-hashes
+// p6112: bring back jsx, sucrase 3.35.1
 // p4804: url in 404 msg
 // p3702: node20 support
 // p3217: public release
@@ -74,7 +75,7 @@ function imports(){
 }
 
 function findBrowserEnv(){
-  let goodName = name => name.substring(5).toUpperCase().replace('-','_')
+  let goodName = name => name.substring(5).toUpperCase().replace(/-/g,'_')
   let selfTags = document.querySelectorAll('script[type="module"][src*="t348"]');
   if(selfTags.length!==1){throw new Error(`T348: Expected exactly one script tag with type="module" src='...t348...' but found ${selfTags.length}`);}
   let moduleAttrs = [...selfTags[0].attributes].filter(x=>x.name.startsWith('data-')).map(x=>[goodName(x.name),x.value]);
@@ -214,9 +215,11 @@ function getTranspiler(){
     let {env} = imports();
     let {DISABLE_SUCRASE} = env;
     _transpiler = DISABLE_SUCRASE ? id : (code, originalUrl) => `${transform(code, {
-      transforms: ["typescript"],
+      transforms: ["typescript", "jsx"],
       filePath: originalUrl,
-      disableESTransforms: true
+      disableESTransforms: true,
+      jsxPragma: env.JSX_PRAGMA || "React.createElement",
+      jsxFragmentPragma: env.JSX_FRAGMENT_PRAGMA || "React.Fragment",
     }).code}
     //# sourceURL=${originalUrl}
     //# sourceURL=${originalUrl}`;
@@ -232,7 +235,7 @@ export function loadImpl(url, context, defaultLoad) {
   let transpiler = getTranspiler();
 
   if (!isT348spec(url) && !isBrowser) { // AND IF NODE ONLY
-    if(url.endsWith('.ts')){
+    if(url.endsWith('.ts')||url.endsWith('.tsx')){ // react sigh
       let filePath = url.replace('file://',''); let code;
       log({url,filePath, willTranspile:true});
       try {
@@ -894,10 +897,109 @@ class SHA256 extends SHA2 {
 
 export const sha256 = wrapConstructor(() => new SHA256());
 
-// BEGIN INLINE sucrase@3.21.0
+// BEGIN INLINE sucrase@3.35.1
 
 const transform=(()=>{
-  const HELPERS = {
+  var __create = Object.create;
+  var __defProp = Object.defineProperty;
+  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+  var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __getProtoOf = Object.getPrototypeOf;
+  var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __commonJS = (cb, mod) => (function __require() {
+    return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+  });
+  var __copyProps = (to, from, except, desc) => {
+    if (from && typeof from === "object" || typeof from === "function") {
+      for (let key of __getOwnPropNames(from))
+        if (!__hasOwnProp.call(to, key) && key !== except)
+          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+    }
+
+    return to;
+  };
+  var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+    // If the importer is in node compatibility mode or this is not an ESM
+    // file that has been converted to a CommonJS file using a Babel-
+    // compatible transform (i.e. "__esModule" has not been set), then set
+    // "default" to the CommonJS "module.exports" for node compatibility.
+    isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+    mod
+  ));
+
+    var require_build = __commonJS({
+    "../sucrase/node_modules/lines-and-columns/build/index.js"(exports) {
+      "use strict";
+      exports.__esModule = true;
+      exports.LinesAndColumns = void 0;
+      var LF = "\n";
+      var CR = "\r";
+      var LinesAndColumns2 = (
+        /** @class */
+        ((function() {
+          function LinesAndColumns3(string) {
+            this.string = string;
+            var offsets = [0];
+            for (var offset = 0; offset < string.length; ) {
+              switch (string[offset]) {
+                case LF:
+                  offset += LF.length;
+                  offsets.push(offset);
+                  break;
+                case CR:
+                  offset += CR.length;
+                  if (string[offset] === LF) {
+                    offset += LF.length;
+                  }
+                  offsets.push(offset);
+                  break;
+                default:
+                  offset++;
+                  break;
+              }
+            }
+            this.offsets = offsets;
+          }
+          LinesAndColumns3.prototype.locationForIndex = function(index) {
+            if (index < 0 || index > this.string.length) {
+              return null;
+            }
+            var line = 0;
+            var offsets = this.offsets;
+            while (offsets[line + 1] <= index) {
+              line++;
+            }
+            var column = index - offsets[line];
+            return { line, column };
+          };
+          LinesAndColumns3.prototype.indexForLocation = function(location) {
+            var line = location.line, column = location.column;
+            if (line < 0 || line >= this.offsets.length) {
+              return null;
+            }
+            if (column < 0 || column > this.lengthOfLine(line)) {
+              return null;
+            }
+            return this.offsets[line] + column;
+          };
+          LinesAndColumns3.prototype.lengthOfLine = function(line) {
+            var offset = this.offsets[line];
+            var nextOffset = line === this.offsets.length - 1 ? this.string.length : this.offsets[line + 1];
+            return nextOffset - offset;
+          };
+          return LinesAndColumns3;
+        })())
+      );
+      exports.LinesAndColumns = LinesAndColumns2;
+      exports["default"] = LinesAndColumns2;
+    }
+  });
+
+    var HELPERS = {
+    require: `
+    import {createRequire as CREATE_REQUIRE_NAME} from "module";
+    const require = CREATE_REQUIRE_NAME(import.meta.url);
+  `,
     interopRequireWildcard: `
     function interopRequireWildcard(obj) {
       if (obj && obj.__esModule) {
@@ -923,7 +1025,7 @@ const transform=(()=>{
   `,
     createNamedExportFrom: `
     function createNamedExportFrom(obj, localName, importedName) {
-      Object.defineProperty(exports, localName, {enumerable: true, get: () => obj[importedName]});
+      Object.defineProperty(exports, localName, {enumerable: true, configurable: true, get: () => obj[importedName]});
     }
   `,
     // Note that TypeScript and Babel do this differently; TypeScript does a simple existence
@@ -938,7 +1040,7 @@ const transform=(()=>{
           if (exports.hasOwnProperty(key)) {
             return;
           }
-          Object.defineProperty(exports, key, {enumerable: true, get: () => obj[key]});
+          Object.defineProperty(exports, key, {enumerable: true, configurable: true, get: () => obj[key]});
         });
     }
   `,
@@ -1017,12 +1119,23 @@ const transform=(()=>{
       const result = await ASYNC_OPTIONAL_CHAIN_NAME(ops);
       return result == null ? true : result;
     }
-  `,
+  `
   };
-
   class HelperManager {
-    __init() {this.helperNames = {};}
-    constructor( nameManager) {this.nameManager = nameManager;HelperManager.prototype.__init.call(this);}
+    __init() {
+      this.helperNames = {};
+    }
+
+    __init2() {
+      this.createRequireName = null;
+    }
+
+    constructor(nameManager) {
+      ;
+      this.nameManager = nameManager;
+      HelperManager.prototype.__init.call(this);
+      HelperManager.prototype.__init2.call(this);
+    }
 
     getHelperName(baseName) {
       let helperName = this.helperNames[baseName];
@@ -1050,8 +1163,13 @@ const transform=(()=>{
         } else if (baseName === "asyncOptionalChainDelete") {
           helperCode = helperCode.replace(
             "ASYNC_OPTIONAL_CHAIN_NAME",
-            this.helperNames.asyncOptionalChain,
+            this.helperNames.asyncOptionalChain
           );
+        } else if (baseName === "require") {
+          if (this.createRequireName === null) {
+            this.createRequireName = this.nameManager.claimFreeName("_createRequire");
+          }
+          helperCode = helperCode.replace(/CREATE_REQUIRE_NAME/g, this.createRequireName);
         }
         if (helperName) {
           resultCode += " ";
@@ -1060,13 +1178,16 @@ const transform=(()=>{
       }
       return resultCode;
     }
-  }
+  };
 
-  var ContextualKeyword; (function (ContextualKeyword) {
+    var ContextualKeyword;
+  (function(ContextualKeyword) {
     const NONE = 0; ContextualKeyword[ContextualKeyword["NONE"] = NONE] = "NONE";
     const _abstract = NONE + 1; ContextualKeyword[ContextualKeyword["_abstract"] = _abstract] = "_abstract";
-    const _as = _abstract + 1; ContextualKeyword[ContextualKeyword["_as"] = _as] = "_as";
-    const _asserts = _as + 1; ContextualKeyword[ContextualKeyword["_asserts"] = _asserts] = "_asserts";
+    const _accessor = _abstract + 1; ContextualKeyword[ContextualKeyword["_accessor"] = _accessor] = "_accessor";
+    const _as = _accessor + 1; ContextualKeyword[ContextualKeyword["_as"] = _as] = "_as";
+    const _assert = _as + 1; ContextualKeyword[ContextualKeyword["_assert"] = _assert] = "_assert";
+    const _asserts = _assert + 1; ContextualKeyword[ContextualKeyword["_asserts"] = _asserts] = "_asserts";
     const _async = _asserts + 1; ContextualKeyword[ContextualKeyword["_async"] = _async] = "_async";
     const _await = _async + 1; ContextualKeyword[ContextualKeyword["_await"] = _await] = "_await";
     const _checks = _await + 1; ContextualKeyword[ContextualKeyword["_checks"] = _checks] = "_checks";
@@ -1087,143 +1208,151 @@ const transform=(()=>{
     const _namespace = _module + 1; ContextualKeyword[ContextualKeyword["_namespace"] = _namespace] = "_namespace";
     const _of = _namespace + 1; ContextualKeyword[ContextualKeyword["_of"] = _of] = "_of";
     const _opaque = _of + 1; ContextualKeyword[ContextualKeyword["_opaque"] = _opaque] = "_opaque";
-    const _override = _opaque + 1; ContextualKeyword[ContextualKeyword["_override"] = _override] = "_override";
+    const _out = _opaque + 1; ContextualKeyword[ContextualKeyword["_out"] = _out] = "_out";
+    const _override = _out + 1; ContextualKeyword[ContextualKeyword["_override"] = _override] = "_override";
     const _private = _override + 1; ContextualKeyword[ContextualKeyword["_private"] = _private] = "_private";
     const _protected = _private + 1; ContextualKeyword[ContextualKeyword["_protected"] = _protected] = "_protected";
     const _proto = _protected + 1; ContextualKeyword[ContextualKeyword["_proto"] = _proto] = "_proto";
     const _public = _proto + 1; ContextualKeyword[ContextualKeyword["_public"] = _public] = "_public";
     const _readonly = _public + 1; ContextualKeyword[ContextualKeyword["_readonly"] = _readonly] = "_readonly";
     const _require = _readonly + 1; ContextualKeyword[ContextualKeyword["_require"] = _require] = "_require";
-    const _set = _require + 1; ContextualKeyword[ContextualKeyword["_set"] = _set] = "_set";
+    const _satisfies = _require + 1; ContextualKeyword[ContextualKeyword["_satisfies"] = _satisfies] = "_satisfies";
+    const _set = _satisfies + 1; ContextualKeyword[ContextualKeyword["_set"] = _set] = "_set";
     const _static = _set + 1; ContextualKeyword[ContextualKeyword["_static"] = _static] = "_static";
-    const _type = _static + 1; ContextualKeyword[ContextualKeyword["_type"] = _type] = "_type";
+    const _symbol = _static + 1; ContextualKeyword[ContextualKeyword["_symbol"] = _symbol] = "_symbol";
+    const _type = _symbol + 1; ContextualKeyword[ContextualKeyword["_type"] = _type] = "_type";
     const _unique = _type + 1; ContextualKeyword[ContextualKeyword["_unique"] = _unique] = "_unique";
+    const _using = _unique + 1; ContextualKeyword[ContextualKeyword["_using"] = _using] = "_using";
   })(ContextualKeyword || (ContextualKeyword = {}));
 
-// Generated file, do not edit! Run "yarn generate" to re-generate this file.
+    // Generated file, do not edit! Run "yarn generate" to re-generate this file.
+  /* istanbul ignore file */
   /**
    * Enum of all token types, with bit fields to signify meaningful properties.
    */
-  var TokenType; (function (TokenType) {
+  var TokenType;
+  (function(TokenType) {
     // Precedence 0 means not an operator; otherwise it is a positive number up to 12.
-    const PRECEDENCE_MASK = 0xf; TokenType[TokenType["PRECEDENCE_MASK"] = PRECEDENCE_MASK] = "PRECEDENCE_MASK";
+    const PRECEDENCE_MASK = 15; TokenType[TokenType["PRECEDENCE_MASK"] = PRECEDENCE_MASK] = "PRECEDENCE_MASK";
     const IS_KEYWORD = 1 << 4; TokenType[TokenType["IS_KEYWORD"] = IS_KEYWORD] = "IS_KEYWORD";
     const IS_ASSIGN = 1 << 5; TokenType[TokenType["IS_ASSIGN"] = IS_ASSIGN] = "IS_ASSIGN";
     const IS_RIGHT_ASSOCIATIVE = 1 << 6; TokenType[TokenType["IS_RIGHT_ASSOCIATIVE"] = IS_RIGHT_ASSOCIATIVE] = "IS_RIGHT_ASSOCIATIVE";
     const IS_PREFIX = 1 << 7; TokenType[TokenType["IS_PREFIX"] = IS_PREFIX] = "IS_PREFIX";
     const IS_POSTFIX = 1 << 8; TokenType[TokenType["IS_POSTFIX"] = IS_POSTFIX] = "IS_POSTFIX";
-
-    const num = 0; TokenType[TokenType["num"] = num] = "num"; // num
-    const bigint = 512; TokenType[TokenType["bigint"] = bigint] = "bigint"; // bigint
-    const decimal = 1024; TokenType[TokenType["decimal"] = decimal] = "decimal"; // decimal
-    const regexp = 1536; TokenType[TokenType["regexp"] = regexp] = "regexp"; // regexp
-    const string = 2048; TokenType[TokenType["string"] = string] = "string"; // string
-    const name = 2560; TokenType[TokenType["name"] = name] = "name"; // name
-    const eof = 3072; TokenType[TokenType["eof"] = eof] = "eof"; // eof
-    const bracketL = 3584; TokenType[TokenType["bracketL"] = bracketL] = "bracketL"; // [
-    const bracketR = 4096; TokenType[TokenType["bracketR"] = bracketR] = "bracketR"; // ]
-    const braceL = 4608; TokenType[TokenType["braceL"] = braceL] = "braceL"; // {
-    const braceBarL = 5120; TokenType[TokenType["braceBarL"] = braceBarL] = "braceBarL"; // {|
-    const braceR = 5632; TokenType[TokenType["braceR"] = braceR] = "braceR"; // }
-    const braceBarR = 6144; TokenType[TokenType["braceBarR"] = braceBarR] = "braceBarR"; // |}
-    const parenL = 6656; TokenType[TokenType["parenL"] = parenL] = "parenL"; // (
-    const parenR = 7168; TokenType[TokenType["parenR"] = parenR] = "parenR"; // )
-    const comma = 7680; TokenType[TokenType["comma"] = comma] = "comma"; // ,
-    const semi = 8192; TokenType[TokenType["semi"] = semi] = "semi"; // ;
-    const colon = 8704; TokenType[TokenType["colon"] = colon] = "colon"; // :
-    const doubleColon = 9216; TokenType[TokenType["doubleColon"] = doubleColon] = "doubleColon"; // ::
-    const dot = 9728; TokenType[TokenType["dot"] = dot] = "dot"; // .
-    const question = 10240; TokenType[TokenType["question"] = question] = "question"; // ?
-    const questionDot = 10752; TokenType[TokenType["questionDot"] = questionDot] = "questionDot"; // ?.
-    const arrow = 11264; TokenType[TokenType["arrow"] = arrow] = "arrow"; // =>
-    const template = 11776; TokenType[TokenType["template"] = template] = "template"; // template
-    const ellipsis = 12288; TokenType[TokenType["ellipsis"] = ellipsis] = "ellipsis"; // ...
-    const backQuote = 12800; TokenType[TokenType["backQuote"] = backQuote] = "backQuote"; // `
-    const dollarBraceL = 13312; TokenType[TokenType["dollarBraceL"] = dollarBraceL] = "dollarBraceL"; // ${
-    const at = 13824; TokenType[TokenType["at"] = at] = "at"; // @
-    const hash = 14336; TokenType[TokenType["hash"] = hash] = "hash"; // #
-    const eq = 14880; TokenType[TokenType["eq"] = eq] = "eq"; // = isAssign
-    const assign = 15392; TokenType[TokenType["assign"] = assign] = "assign"; // _= isAssign
-    const preIncDec = 16256; TokenType[TokenType["preIncDec"] = preIncDec] = "preIncDec"; // ++/-- prefix postfix
-    const postIncDec = 16768; TokenType[TokenType["postIncDec"] = postIncDec] = "postIncDec"; // ++/-- prefix postfix
-    const bang = 17024; TokenType[TokenType["bang"] = bang] = "bang"; // ! prefix
-    const tilde = 17536; TokenType[TokenType["tilde"] = tilde] = "tilde"; // ~ prefix
-    const pipeline = 17921; TokenType[TokenType["pipeline"] = pipeline] = "pipeline"; // |> prec:1
-    const nullishCoalescing = 18434; TokenType[TokenType["nullishCoalescing"] = nullishCoalescing] = "nullishCoalescing"; // ?? prec:2
-    const logicalOR = 18946; TokenType[TokenType["logicalOR"] = logicalOR] = "logicalOR"; // || prec:2
-    const logicalAND = 19459; TokenType[TokenType["logicalAND"] = logicalAND] = "logicalAND"; // && prec:3
-    const bitwiseOR = 19972; TokenType[TokenType["bitwiseOR"] = bitwiseOR] = "bitwiseOR"; // | prec:4
-    const bitwiseXOR = 20485; TokenType[TokenType["bitwiseXOR"] = bitwiseXOR] = "bitwiseXOR"; // ^ prec:5
-    const bitwiseAND = 20998; TokenType[TokenType["bitwiseAND"] = bitwiseAND] = "bitwiseAND"; // & prec:6
-    const equality = 21511; TokenType[TokenType["equality"] = equality] = "equality"; // ==/!= prec:7
-    const lessThan = 22024; TokenType[TokenType["lessThan"] = lessThan] = "lessThan"; // < prec:8
-    const greaterThan = 22536; TokenType[TokenType["greaterThan"] = greaterThan] = "greaterThan"; // > prec:8
-    const relationalOrEqual = 23048; TokenType[TokenType["relationalOrEqual"] = relationalOrEqual] = "relationalOrEqual"; // <=/>= prec:8
-    const bitShift = 23561; TokenType[TokenType["bitShift"] = bitShift] = "bitShift"; // <</>> prec:9
-    const plus = 24202; TokenType[TokenType["plus"] = plus] = "plus"; // + prec:10 prefix
-    const minus = 24714; TokenType[TokenType["minus"] = minus] = "minus"; // - prec:10 prefix
-    const modulo = 25099; TokenType[TokenType["modulo"] = modulo] = "modulo"; // % prec:11
-    const star = 25611; TokenType[TokenType["star"] = star] = "star"; // * prec:11
-    const slash = 26123; TokenType[TokenType["slash"] = slash] = "slash"; // / prec:11
-    const exponent = 26700; TokenType[TokenType["exponent"] = exponent] = "exponent"; // ** prec:12 rightAssociative
-    const jsxName = 27136; TokenType[TokenType["jsxName"] = jsxName] = "jsxName"; // jsxName
-    const jsxText = 27648; TokenType[TokenType["jsxText"] = jsxText] = "jsxText"; // jsxText
-    const jsxTagStart = 28160; TokenType[TokenType["jsxTagStart"] = jsxTagStart] = "jsxTagStart"; // jsxTagStart
-    const jsxTagEnd = 28672; TokenType[TokenType["jsxTagEnd"] = jsxTagEnd] = "jsxTagEnd"; // jsxTagEnd
-    const typeParameterStart = 29184; TokenType[TokenType["typeParameterStart"] = typeParameterStart] = "typeParameterStart"; // typeParameterStart
-    const nonNullAssertion = 29696; TokenType[TokenType["nonNullAssertion"] = nonNullAssertion] = "nonNullAssertion"; // nonNullAssertion
-    const _break = 30224; TokenType[TokenType["_break"] = _break] = "_break"; // break keyword
-    const _case = 30736; TokenType[TokenType["_case"] = _case] = "_case"; // case keyword
-    const _catch = 31248; TokenType[TokenType["_catch"] = _catch] = "_catch"; // catch keyword
-    const _continue = 31760; TokenType[TokenType["_continue"] = _continue] = "_continue"; // continue keyword
-    const _debugger = 32272; TokenType[TokenType["_debugger"] = _debugger] = "_debugger"; // debugger keyword
-    const _default = 32784; TokenType[TokenType["_default"] = _default] = "_default"; // default keyword
-    const _do = 33296; TokenType[TokenType["_do"] = _do] = "_do"; // do keyword
-    const _else = 33808; TokenType[TokenType["_else"] = _else] = "_else"; // else keyword
-    const _finally = 34320; TokenType[TokenType["_finally"] = _finally] = "_finally"; // finally keyword
-    const _for = 34832; TokenType[TokenType["_for"] = _for] = "_for"; // for keyword
-    const _function = 35344; TokenType[TokenType["_function"] = _function] = "_function"; // function keyword
-    const _if = 35856; TokenType[TokenType["_if"] = _if] = "_if"; // if keyword
-    const _return = 36368; TokenType[TokenType["_return"] = _return] = "_return"; // return keyword
-    const _switch = 36880; TokenType[TokenType["_switch"] = _switch] = "_switch"; // switch keyword
-    const _throw = 37520; TokenType[TokenType["_throw"] = _throw] = "_throw"; // throw keyword prefix
-    const _try = 37904; TokenType[TokenType["_try"] = _try] = "_try"; // try keyword
-    const _var = 38416; TokenType[TokenType["_var"] = _var] = "_var"; // var keyword
-    const _let = 38928; TokenType[TokenType["_let"] = _let] = "_let"; // let keyword
-    const _const = 39440; TokenType[TokenType["_const"] = _const] = "_const"; // const keyword
-    const _while = 39952; TokenType[TokenType["_while"] = _while] = "_while"; // while keyword
-    const _with = 40464; TokenType[TokenType["_with"] = _with] = "_with"; // with keyword
-    const _new = 40976; TokenType[TokenType["_new"] = _new] = "_new"; // new keyword
-    const _this = 41488; TokenType[TokenType["_this"] = _this] = "_this"; // this keyword
-    const _super = 42000; TokenType[TokenType["_super"] = _super] = "_super"; // super keyword
-    const _class = 42512; TokenType[TokenType["_class"] = _class] = "_class"; // class keyword
-    const _extends = 43024; TokenType[TokenType["_extends"] = _extends] = "_extends"; // extends keyword
-    const _export = 43536; TokenType[TokenType["_export"] = _export] = "_export"; // export keyword
-    const _import = 44048; TokenType[TokenType["_import"] = _import] = "_import"; // import keyword
-    const _yield = 44560; TokenType[TokenType["_yield"] = _yield] = "_yield"; // yield keyword
-    const _null = 45072; TokenType[TokenType["_null"] = _null] = "_null"; // null keyword
-    const _true = 45584; TokenType[TokenType["_true"] = _true] = "_true"; // true keyword
-    const _false = 46096; TokenType[TokenType["_false"] = _false] = "_false"; // false keyword
-    const _in = 46616; TokenType[TokenType["_in"] = _in] = "_in"; // in prec:8 keyword
-    const _instanceof = 47128; TokenType[TokenType["_instanceof"] = _instanceof] = "_instanceof"; // instanceof prec:8 keyword
-    const _typeof = 47760; TokenType[TokenType["_typeof"] = _typeof] = "_typeof"; // typeof keyword prefix
-    const _void = 48272; TokenType[TokenType["_void"] = _void] = "_void"; // void keyword prefix
-    const _delete = 48784; TokenType[TokenType["_delete"] = _delete] = "_delete"; // delete keyword prefix
-    const _async = 49168; TokenType[TokenType["_async"] = _async] = "_async"; // async keyword
-    const _get = 49680; TokenType[TokenType["_get"] = _get] = "_get"; // get keyword
-    const _set = 50192; TokenType[TokenType["_set"] = _set] = "_set"; // set keyword
-    const _declare = 50704; TokenType[TokenType["_declare"] = _declare] = "_declare"; // declare keyword
-    const _readonly = 51216; TokenType[TokenType["_readonly"] = _readonly] = "_readonly"; // readonly keyword
-    const _abstract = 51728; TokenType[TokenType["_abstract"] = _abstract] = "_abstract"; // abstract keyword
-    const _static = 52240; TokenType[TokenType["_static"] = _static] = "_static"; // static keyword
-    const _public = 52752; TokenType[TokenType["_public"] = _public] = "_public"; // public keyword
-    const _private = 53264; TokenType[TokenType["_private"] = _private] = "_private"; // private keyword
-    const _protected = 53776; TokenType[TokenType["_protected"] = _protected] = "_protected"; // protected keyword
-    const _override = 54288; TokenType[TokenType["_override"] = _override] = "_override"; // override keyword
-    const _as = 54800; TokenType[TokenType["_as"] = _as] = "_as"; // as keyword
-    const _enum = 55312; TokenType[TokenType["_enum"] = _enum] = "_enum"; // enum keyword
-    const _type = 55824; TokenType[TokenType["_type"] = _type] = "_type"; // type keyword
-    const _implements = 56336; TokenType[TokenType["_implements"] = _implements] = "_implements"; // implements keyword
+    const IS_EXPRESSION_START = 1 << 9; TokenType[TokenType["IS_EXPRESSION_START"] = IS_EXPRESSION_START] = "IS_EXPRESSION_START";
+    const num = 512; TokenType[TokenType["num"] = num] = "num"; // num startsExpr
+    const bigint = 1536; TokenType[TokenType["bigint"] = bigint] = "bigint"; // bigint startsExpr
+    const decimal = 2560; TokenType[TokenType["decimal"] = decimal] = "decimal"; // decimal startsExpr
+    const regexp = 3584; TokenType[TokenType["regexp"] = regexp] = "regexp"; // regexp startsExpr
+    const string = 4608; TokenType[TokenType["string"] = string] = "string"; // string startsExpr
+    const name = 5632; TokenType[TokenType["name"] = name] = "name"; // name startsExpr
+    const eof = 6144; TokenType[TokenType["eof"] = eof] = "eof"; // eof
+    const bracketL = 7680; TokenType[TokenType["bracketL"] = bracketL] = "bracketL"; // [ startsExpr
+    const bracketR = 8192; TokenType[TokenType["bracketR"] = bracketR] = "bracketR"; // ]
+    const braceL = 9728; TokenType[TokenType["braceL"] = braceL] = "braceL"; // { startsExpr
+    const braceBarL = 10752; TokenType[TokenType["braceBarL"] = braceBarL] = "braceBarL"; // {| startsExpr
+    const braceR = 11264; TokenType[TokenType["braceR"] = braceR] = "braceR"; // }
+    const braceBarR = 12288; TokenType[TokenType["braceBarR"] = braceBarR] = "braceBarR"; // |}
+    const parenL = 13824; TokenType[TokenType["parenL"] = parenL] = "parenL"; // ( startsExpr
+    const parenR = 14336; TokenType[TokenType["parenR"] = parenR] = "parenR"; // )
+    const comma = 15360; TokenType[TokenType["comma"] = comma] = "comma"; // ,
+    const semi = 16384; TokenType[TokenType["semi"] = semi] = "semi"; // ;
+    const colon = 17408; TokenType[TokenType["colon"] = colon] = "colon"; // :
+    const doubleColon = 18432; TokenType[TokenType["doubleColon"] = doubleColon] = "doubleColon"; // ::
+    const dot = 19456; TokenType[TokenType["dot"] = dot] = "dot"; // .
+    const question = 20480; TokenType[TokenType["question"] = question] = "question"; // ?
+    const questionDot = 21504; TokenType[TokenType["questionDot"] = questionDot] = "questionDot"; // ?.
+    const arrow = 22528; TokenType[TokenType["arrow"] = arrow] = "arrow"; // =>
+    const template = 23552; TokenType[TokenType["template"] = template] = "template"; // template
+    const ellipsis = 24576; TokenType[TokenType["ellipsis"] = ellipsis] = "ellipsis"; // ...
+    const backQuote = 25600; TokenType[TokenType["backQuote"] = backQuote] = "backQuote"; // `
+    const dollarBraceL = 27136; TokenType[TokenType["dollarBraceL"] = dollarBraceL] = "dollarBraceL"; // ${ startsExpr
+    const at = 27648; TokenType[TokenType["at"] = at] = "at"; // @
+    const hash = 29184; TokenType[TokenType["hash"] = hash] = "hash"; // # startsExpr
+    const eq = 29728; TokenType[TokenType["eq"] = eq] = "eq"; // = isAssign
+    const assign = 30752; TokenType[TokenType["assign"] = assign] = "assign"; // _= isAssign
+    const preIncDec = 32640; TokenType[TokenType["preIncDec"] = preIncDec] = "preIncDec"; // ++/-- prefix postfix startsExpr
+    const postIncDec = 33664; TokenType[TokenType["postIncDec"] = postIncDec] = "postIncDec"; // ++/-- prefix postfix startsExpr
+    const bang = 34432; TokenType[TokenType["bang"] = bang] = "bang"; // ! prefix startsExpr
+    const tilde = 35456; TokenType[TokenType["tilde"] = tilde] = "tilde"; // ~ prefix startsExpr
+    const pipeline = 35841; TokenType[TokenType["pipeline"] = pipeline] = "pipeline"; // |> prec:1
+    const nullishCoalescing = 36866; TokenType[TokenType["nullishCoalescing"] = nullishCoalescing] = "nullishCoalescing"; // ?? prec:2
+    const logicalOR = 37890; TokenType[TokenType["logicalOR"] = logicalOR] = "logicalOR"; // || prec:2
+    const logicalAND = 38915; TokenType[TokenType["logicalAND"] = logicalAND] = "logicalAND"; // && prec:3
+    const bitwiseOR = 39940; TokenType[TokenType["bitwiseOR"] = bitwiseOR] = "bitwiseOR"; // | prec:4
+    const bitwiseXOR = 40965; TokenType[TokenType["bitwiseXOR"] = bitwiseXOR] = "bitwiseXOR"; // ^ prec:5
+    const bitwiseAND = 41990; TokenType[TokenType["bitwiseAND"] = bitwiseAND] = "bitwiseAND"; // & prec:6
+    const equality = 43015; TokenType[TokenType["equality"] = equality] = "equality"; // ==/!= prec:7
+    const lessThan = 44040; TokenType[TokenType["lessThan"] = lessThan] = "lessThan"; // < prec:8
+    const greaterThan = 45064; TokenType[TokenType["greaterThan"] = greaterThan] = "greaterThan"; // > prec:8
+    const relationalOrEqual = 46088; TokenType[TokenType["relationalOrEqual"] = relationalOrEqual] = "relationalOrEqual"; // <=/>= prec:8
+    const bitShiftL = 47113; TokenType[TokenType["bitShiftL"] = bitShiftL] = "bitShiftL"; // << prec:9
+    const bitShiftR = 48137; TokenType[TokenType["bitShiftR"] = bitShiftR] = "bitShiftR"; // >>/>>> prec:9
+    const plus = 49802; TokenType[TokenType["plus"] = plus] = "plus"; // + prec:10 prefix startsExpr
+    const minus = 50826; TokenType[TokenType["minus"] = minus] = "minus"; // - prec:10 prefix startsExpr
+    const modulo = 51723; TokenType[TokenType["modulo"] = modulo] = "modulo"; // % prec:11 startsExpr
+    const star = 52235; TokenType[TokenType["star"] = star] = "star"; // * prec:11
+    const slash = 53259; TokenType[TokenType["slash"] = slash] = "slash"; // / prec:11
+    const exponent = 54348; TokenType[TokenType["exponent"] = exponent] = "exponent"; // ** prec:12 rightAssociative
+    const jsxName = 55296; TokenType[TokenType["jsxName"] = jsxName] = "jsxName"; // jsxName
+    const jsxText = 56320; TokenType[TokenType["jsxText"] = jsxText] = "jsxText"; // jsxText
+    const jsxEmptyText = 57344; TokenType[TokenType["jsxEmptyText"] = jsxEmptyText] = "jsxEmptyText"; // jsxEmptyText
+    const jsxTagStart = 58880; TokenType[TokenType["jsxTagStart"] = jsxTagStart] = "jsxTagStart"; // jsxTagStart startsExpr
+    const jsxTagEnd = 59392; TokenType[TokenType["jsxTagEnd"] = jsxTagEnd] = "jsxTagEnd"; // jsxTagEnd
+    const typeParameterStart = 60928; TokenType[TokenType["typeParameterStart"] = typeParameterStart] = "typeParameterStart"; // typeParameterStart startsExpr
+    const nonNullAssertion = 61440; TokenType[TokenType["nonNullAssertion"] = nonNullAssertion] = "nonNullAssertion"; // nonNullAssertion
+    const _break = 62480; TokenType[TokenType["_break"] = _break] = "_break"; // break keyword
+    const _case = 63504; TokenType[TokenType["_case"] = _case] = "_case"; // case keyword
+    const _catch = 64528; TokenType[TokenType["_catch"] = _catch] = "_catch"; // catch keyword
+    const _continue = 65552; TokenType[TokenType["_continue"] = _continue] = "_continue"; // continue keyword
+    const _debugger = 66576; TokenType[TokenType["_debugger"] = _debugger] = "_debugger"; // debugger keyword
+    const _default = 67600; TokenType[TokenType["_default"] = _default] = "_default"; // default keyword
+    const _do = 68624; TokenType[TokenType["_do"] = _do] = "_do"; // do keyword
+    const _else = 69648; TokenType[TokenType["_else"] = _else] = "_else"; // else keyword
+    const _finally = 70672; TokenType[TokenType["_finally"] = _finally] = "_finally"; // finally keyword
+    const _for = 71696; TokenType[TokenType["_for"] = _for] = "_for"; // for keyword
+    const _function = 73232; TokenType[TokenType["_function"] = _function] = "_function"; // function keyword startsExpr
+    const _if = 73744; TokenType[TokenType["_if"] = _if] = "_if"; // if keyword
+    const _return = 74768; TokenType[TokenType["_return"] = _return] = "_return"; // return keyword
+    const _switch = 75792; TokenType[TokenType["_switch"] = _switch] = "_switch"; // switch keyword
+    const _throw = 77456; TokenType[TokenType["_throw"] = _throw] = "_throw"; // throw keyword prefix startsExpr
+    const _try = 77840; TokenType[TokenType["_try"] = _try] = "_try"; // try keyword
+    const _var = 78864; TokenType[TokenType["_var"] = _var] = "_var"; // var keyword
+    const _let = 79888; TokenType[TokenType["_let"] = _let] = "_let"; // let keyword
+    const _const = 80912; TokenType[TokenType["_const"] = _const] = "_const"; // const keyword
+    const _while = 81936; TokenType[TokenType["_while"] = _while] = "_while"; // while keyword
+    const _with = 82960; TokenType[TokenType["_with"] = _with] = "_with"; // with keyword
+    const _new = 84496; TokenType[TokenType["_new"] = _new] = "_new"; // new keyword startsExpr
+    const _this = 85520; TokenType[TokenType["_this"] = _this] = "_this"; // this keyword startsExpr
+    const _super = 86544; TokenType[TokenType["_super"] = _super] = "_super"; // super keyword startsExpr
+    const _class = 87568; TokenType[TokenType["_class"] = _class] = "_class"; // class keyword startsExpr
+    const _extends = 88080; TokenType[TokenType["_extends"] = _extends] = "_extends"; // extends keyword
+    const _export = 89104; TokenType[TokenType["_export"] = _export] = "_export"; // export keyword
+    const _import = 90640; TokenType[TokenType["_import"] = _import] = "_import"; // import keyword startsExpr
+    const _yield = 91664; TokenType[TokenType["_yield"] = _yield] = "_yield"; // yield keyword startsExpr
+    const _null = 92688; TokenType[TokenType["_null"] = _null] = "_null"; // null keyword startsExpr
+    const _true = 93712; TokenType[TokenType["_true"] = _true] = "_true"; // true keyword startsExpr
+    const _false = 94736; TokenType[TokenType["_false"] = _false] = "_false"; // false keyword startsExpr
+    const _in = 95256; TokenType[TokenType["_in"] = _in] = "_in"; // in prec:8 keyword
+    const _instanceof = 96280; TokenType[TokenType["_instanceof"] = _instanceof] = "_instanceof"; // instanceof prec:8 keyword
+    const _typeof = 97936; TokenType[TokenType["_typeof"] = _typeof] = "_typeof"; // typeof keyword prefix startsExpr
+    const _void = 98960; TokenType[TokenType["_void"] = _void] = "_void"; // void keyword prefix startsExpr
+    const _delete = 99984; TokenType[TokenType["_delete"] = _delete] = "_delete"; // delete keyword prefix startsExpr
+    const _async = 100880; TokenType[TokenType["_async"] = _async] = "_async"; // async keyword startsExpr
+    const _get = 101904; TokenType[TokenType["_get"] = _get] = "_get"; // get keyword startsExpr
+    const _set = 102928; TokenType[TokenType["_set"] = _set] = "_set"; // set keyword startsExpr
+    const _declare = 103952; TokenType[TokenType["_declare"] = _declare] = "_declare"; // declare keyword startsExpr
+    const _readonly = 104976; TokenType[TokenType["_readonly"] = _readonly] = "_readonly"; // readonly keyword startsExpr
+    const _abstract = 106e3; TokenType[TokenType["_abstract"] = _abstract] = "_abstract"; // abstract keyword startsExpr
+    const _static = 107024; TokenType[TokenType["_static"] = _static] = "_static"; // static keyword startsExpr
+    const _public = 107536; TokenType[TokenType["_public"] = _public] = "_public"; // public keyword
+    const _private = 108560; TokenType[TokenType["_private"] = _private] = "_private"; // private keyword
+    const _protected = 109584; TokenType[TokenType["_protected"] = _protected] = "_protected"; // protected keyword
+    const _override = 110608; TokenType[TokenType["_override"] = _override] = "_override"; // override keyword
+    const _as = 112144; TokenType[TokenType["_as"] = _as] = "_as"; // as keyword startsExpr
+    const _enum = 113168; TokenType[TokenType["_enum"] = _enum] = "_enum"; // enum keyword startsExpr
+    const _type = 114192; TokenType[TokenType["_type"] = _type] = "_type"; // type keyword startsExpr
+    const _implements = 115216; TokenType[TokenType["_implements"] = _implements] = "_implements"; // implements keyword startsExpr
   })(TokenType || (TokenType = {}));
   function formatTokenType(tokenType) {
     switch (tokenType) {
@@ -1319,8 +1448,10 @@ const transform=(()=>{
         return ">";
       case TokenType.relationalOrEqual:
         return "<=/>=";
-      case TokenType.bitShift:
-        return "<</>>";
+      case TokenType.bitShiftL:
+        return "<<";
+      case TokenType.bitShiftR:
+        return ">>/>>>";
       case TokenType.plus:
         return "+";
       case TokenType.minus:
@@ -1337,6 +1468,8 @@ const transform=(()=>{
         return "jsxName";
       case TokenType.jsxText:
         return "jsxText";
+      case TokenType.jsxEmptyText:
+        return "jsxEmptyText";
       case TokenType.jsxTagStart:
         return "jsxTagStart";
       case TokenType.jsxTagEnd:
@@ -1454,59 +1587,102 @@ const transform=(()=>{
     }
   }
 
-  class Scope {
-
-
-
-
+    class Scope {
     constructor(startTokenIndex, endTokenIndex, isFunctionScope) {
       this.startTokenIndex = startTokenIndex;
       this.endTokenIndex = endTokenIndex;
       this.isFunctionScope = isFunctionScope;
     }
-  }
-
+  };
   class StateSnapshot {
-    constructor(
-      potentialArrowAt,
-      noAnonFunctionType,
-      tokensLength,
-      scopesLength,
-      pos,
-      type,
-      contextualKeyword,
-      start,
-      end,
-      isType,
-      scopeDepth,
-      error,
-    ) {this.potentialArrowAt = potentialArrowAt;this.noAnonFunctionType = noAnonFunctionType;this.tokensLength = tokensLength;this.scopesLength = scopesLength;this.pos = pos;this.type = type;this.contextualKeyword = contextualKeyword;this.start = start;this.end = end;this.isType = isType;this.scopeDepth = scopeDepth;this.error = error;}
-  }
+    constructor(potentialArrowAt, noAnonFunctionType, inDisallowConditionalTypesContext, tokensLength, scopesLength, pos, type, contextualKeyword, start, end, isType, scopeDepth, error) {
+      ;
+      this.potentialArrowAt = potentialArrowAt;
+      this.noAnonFunctionType = noAnonFunctionType;
+      this.inDisallowConditionalTypesContext = inDisallowConditionalTypesContext;
+      this.tokensLength = tokensLength;
+      this.scopesLength = scopesLength;
+      this.pos = pos;
+      this.type = type;
+      this.contextualKeyword = contextualKeyword;
+      this.start = start;
+      this.end = end;
+      this.isType = isType;
+      this.scopeDepth = scopeDepth;
+      this.error = error;
+    }
+  };
+  class State {
+    constructor() {
+      State.prototype.__init.call(this);
+      State.prototype.__init2.call(this);
+      State.prototype.__init3.call(this);
+      State.prototype.__init4.call(this);
+      State.prototype.__init5.call(this);
+      State.prototype.__init6.call(this);
+      State.prototype.__init7.call(this);
+      State.prototype.__init8.call(this);
+      State.prototype.__init9.call(this);
+      State.prototype.__init10.call(this);
+      State.prototype.__init11.call(this);
+      State.prototype.__init12.call(this);
+      State.prototype.__init13.call(this);
+    }
 
-  class State {constructor() { State.prototype.__init.call(this);State.prototype.__init2.call(this);State.prototype.__init3.call(this);State.prototype.__init4.call(this);State.prototype.__init5.call(this);State.prototype.__init6.call(this);State.prototype.__init7.call(this);State.prototype.__init8.call(this);State.prototype.__init9.call(this);State.prototype.__init10.call(this);State.prototype.__init11.call(this);State.prototype.__init12.call(this); }
     // Used to signify the start of a potential arrow function
-    __init() {this.potentialArrowAt = -1;}
+    __init() {
+      this.potentialArrowAt = -1;
+    }
 
     // Used by Flow to handle an edge case involving function type parsing.
-    __init2() {this.noAnonFunctionType = false;}
+    __init2() {
+      this.noAnonFunctionType = false;
+    }
+
+    // Used by TypeScript to handle ambiguities when parsing conditional types.
+    __init3() {
+      this.inDisallowConditionalTypesContext = false;
+    }
 
     // Token store.
-    __init3() {this.tokens = [];}
+    __init4() {
+      this.tokens = [];
+    }
 
     // Array of all observed scopes, ordered by their ending position.
-    __init4() {this.scopes = [];}
+    __init5() {
+      this.scopes = [];
+    }
 
     // The current position of the tokenizer in the input.
-    __init5() {this.pos = 0;}
+    __init6() {
+      this.pos = 0;
+    }
 
     // Information about the current token.
-    __init6() {this.type = TokenType.eof;}
-    __init7() {this.contextualKeyword = ContextualKeyword.NONE;}
-    __init8() {this.start = 0;}
-    __init9() {this.end = 0;}
+    __init7() {
+      this.type = TokenType.eof;
+    }
 
-    __init10() {this.isType = false;}
-    __init11() {this.scopeDepth = 0;}
+    __init8() {
+      this.contextualKeyword = ContextualKeyword.NONE;
+    }
+
+    __init9() {
+      this.start = 0;
+    }
+
+    __init10() {
+      this.end = 0;
+    }
+
+    __init11() {
+      this.isType = false;
+    }
+
+    __init12() {
+      this.scopeDepth = 0;
+    }
 
     /**
      * If the parser is in an error state, then the token is always tt.eof and all functions can
@@ -1516,12 +1692,15 @@ const transform=(()=>{
      * backtracking without exceptions and without needing to explicitly propagate error states
      * everywhere.
      */
-    __init12() {this.error = null;}
+    __init13() {
+      this.error = null;
+    }
 
     snapshot() {
       return new StateSnapshot(
         this.potentialArrowAt,
         this.noAnonFunctionType,
+        this.inDisallowConditionalTypesContext,
         this.tokens.length,
         this.scopes.length,
         this.pos,
@@ -1531,13 +1710,14 @@ const transform=(()=>{
         this.end,
         this.isType,
         this.scopeDepth,
-        this.error,
+        this.error
       );
     }
 
     restoreFromSnapshot(snapshot) {
       this.potentialArrowAt = snapshot.potentialArrowAt;
       this.noAnonFunctionType = snapshot.noAnonFunctionType;
+      this.inDisallowConditionalTypesContext = snapshot.inDisallowConditionalTypesContext;
       this.tokens.length = snapshot.tokensLength;
       this.scopes.length = snapshot.scopesLength;
       this.pos = snapshot.pos;
@@ -1549,144 +1729,242 @@ const transform=(()=>{
       this.scopeDepth = snapshot.scopeDepth;
       this.error = snapshot.error;
     }
-  }
+  };
 
-  var charCodes; (function (charCodes) {
+    var charCodes;
+  (function(charCodes) {
     const backSpace = 8; charCodes[charCodes["backSpace"] = backSpace] = "backSpace";
-    const lineFeed = 10; charCodes[charCodes["lineFeed"] = lineFeed] = "lineFeed"; //  '\n'
-    const carriageReturn = 13; charCodes[charCodes["carriageReturn"] = carriageReturn] = "carriageReturn"; //  '\r'
+    const lineFeed = 10; charCodes[charCodes["lineFeed"] = lineFeed] = "lineFeed";
+    //  '\n'
+    const tab = 9; charCodes[charCodes["tab"] = tab] = "tab";
+    //  '\t'
+    const carriageReturn = 13; charCodes[charCodes["carriageReturn"] = carriageReturn] = "carriageReturn";
+    //  '\r'
     const shiftOut = 14; charCodes[charCodes["shiftOut"] = shiftOut] = "shiftOut";
     const space = 32; charCodes[charCodes["space"] = space] = "space";
-    const exclamationMark = 33; charCodes[charCodes["exclamationMark"] = exclamationMark] = "exclamationMark"; //  '!'
-    const quotationMark = 34; charCodes[charCodes["quotationMark"] = quotationMark] = "quotationMark"; //  '"'
-    const numberSign = 35; charCodes[charCodes["numberSign"] = numberSign] = "numberSign"; //  '#'
-    const dollarSign = 36; charCodes[charCodes["dollarSign"] = dollarSign] = "dollarSign"; //  '$'
-    const percentSign = 37; charCodes[charCodes["percentSign"] = percentSign] = "percentSign"; //  '%'
-    const ampersand = 38; charCodes[charCodes["ampersand"] = ampersand] = "ampersand"; //  '&'
-    const apostrophe = 39; charCodes[charCodes["apostrophe"] = apostrophe] = "apostrophe"; //  '''
-    const leftParenthesis = 40; charCodes[charCodes["leftParenthesis"] = leftParenthesis] = "leftParenthesis"; //  '('
-    const rightParenthesis = 41; charCodes[charCodes["rightParenthesis"] = rightParenthesis] = "rightParenthesis"; //  ')'
-    const asterisk = 42; charCodes[charCodes["asterisk"] = asterisk] = "asterisk"; //  '*'
-    const plusSign = 43; charCodes[charCodes["plusSign"] = plusSign] = "plusSign"; //  '+'
-    const comma = 44; charCodes[charCodes["comma"] = comma] = "comma"; //  ','
-    const dash = 45; charCodes[charCodes["dash"] = dash] = "dash"; //  '-'
-    const dot = 46; charCodes[charCodes["dot"] = dot] = "dot"; //  '.'
-    const slash = 47; charCodes[charCodes["slash"] = slash] = "slash"; //  '/'
-    const digit0 = 48; charCodes[charCodes["digit0"] = digit0] = "digit0"; //  '0'
-    const digit1 = 49; charCodes[charCodes["digit1"] = digit1] = "digit1"; //  '1'
-    const digit2 = 50; charCodes[charCodes["digit2"] = digit2] = "digit2"; //  '2'
-    const digit3 = 51; charCodes[charCodes["digit3"] = digit3] = "digit3"; //  '3'
-    const digit4 = 52; charCodes[charCodes["digit4"] = digit4] = "digit4"; //  '4'
-    const digit5 = 53; charCodes[charCodes["digit5"] = digit5] = "digit5"; //  '5'
-    const digit6 = 54; charCodes[charCodes["digit6"] = digit6] = "digit6"; //  '6'
-    const digit7 = 55; charCodes[charCodes["digit7"] = digit7] = "digit7"; //  '7'
-    const digit8 = 56; charCodes[charCodes["digit8"] = digit8] = "digit8"; //  '8'
-    const digit9 = 57; charCodes[charCodes["digit9"] = digit9] = "digit9"; //  '9'
-    const colon = 58; charCodes[charCodes["colon"] = colon] = "colon"; //  ':'
-    const semicolon = 59; charCodes[charCodes["semicolon"] = semicolon] = "semicolon"; //  ';'
-    const lessThan = 60; charCodes[charCodes["lessThan"] = lessThan] = "lessThan"; //  '<'
-    const equalsTo = 61; charCodes[charCodes["equalsTo"] = equalsTo] = "equalsTo"; //  '='
-    const greaterThan = 62; charCodes[charCodes["greaterThan"] = greaterThan] = "greaterThan"; //  '>'
-    const questionMark = 63; charCodes[charCodes["questionMark"] = questionMark] = "questionMark"; //  '?'
-    const atSign = 64; charCodes[charCodes["atSign"] = atSign] = "atSign"; //  '@'
-    const uppercaseA = 65; charCodes[charCodes["uppercaseA"] = uppercaseA] = "uppercaseA"; //  'A'
-    const uppercaseB = 66; charCodes[charCodes["uppercaseB"] = uppercaseB] = "uppercaseB"; //  'B'
-    const uppercaseC = 67; charCodes[charCodes["uppercaseC"] = uppercaseC] = "uppercaseC"; //  'C'
-    const uppercaseD = 68; charCodes[charCodes["uppercaseD"] = uppercaseD] = "uppercaseD"; //  'D'
-    const uppercaseE = 69; charCodes[charCodes["uppercaseE"] = uppercaseE] = "uppercaseE"; //  'E'
-    const uppercaseF = 70; charCodes[charCodes["uppercaseF"] = uppercaseF] = "uppercaseF"; //  'F'
-    const uppercaseG = 71; charCodes[charCodes["uppercaseG"] = uppercaseG] = "uppercaseG"; //  'G'
-    const uppercaseH = 72; charCodes[charCodes["uppercaseH"] = uppercaseH] = "uppercaseH"; //  'H'
-    const uppercaseI = 73; charCodes[charCodes["uppercaseI"] = uppercaseI] = "uppercaseI"; //  'I'
-    const uppercaseJ = 74; charCodes[charCodes["uppercaseJ"] = uppercaseJ] = "uppercaseJ"; //  'J'
-    const uppercaseK = 75; charCodes[charCodes["uppercaseK"] = uppercaseK] = "uppercaseK"; //  'K'
-    const uppercaseL = 76; charCodes[charCodes["uppercaseL"] = uppercaseL] = "uppercaseL"; //  'L'
-    const uppercaseM = 77; charCodes[charCodes["uppercaseM"] = uppercaseM] = "uppercaseM"; //  'M'
-    const uppercaseN = 78; charCodes[charCodes["uppercaseN"] = uppercaseN] = "uppercaseN"; //  'N'
-    const uppercaseO = 79; charCodes[charCodes["uppercaseO"] = uppercaseO] = "uppercaseO"; //  'O'
-    const uppercaseP = 80; charCodes[charCodes["uppercaseP"] = uppercaseP] = "uppercaseP"; //  'P'
-    const uppercaseQ = 81; charCodes[charCodes["uppercaseQ"] = uppercaseQ] = "uppercaseQ"; //  'Q'
-    const uppercaseR = 82; charCodes[charCodes["uppercaseR"] = uppercaseR] = "uppercaseR"; //  'R'
-    const uppercaseS = 83; charCodes[charCodes["uppercaseS"] = uppercaseS] = "uppercaseS"; //  'S'
-    const uppercaseT = 84; charCodes[charCodes["uppercaseT"] = uppercaseT] = "uppercaseT"; //  'T'
-    const uppercaseU = 85; charCodes[charCodes["uppercaseU"] = uppercaseU] = "uppercaseU"; //  'U'
-    const uppercaseV = 86; charCodes[charCodes["uppercaseV"] = uppercaseV] = "uppercaseV"; //  'V'
-    const uppercaseW = 87; charCodes[charCodes["uppercaseW"] = uppercaseW] = "uppercaseW"; //  'W'
-    const uppercaseX = 88; charCodes[charCodes["uppercaseX"] = uppercaseX] = "uppercaseX"; //  'X'
-    const uppercaseY = 89; charCodes[charCodes["uppercaseY"] = uppercaseY] = "uppercaseY"; //  'Y'
-    const uppercaseZ = 90; charCodes[charCodes["uppercaseZ"] = uppercaseZ] = "uppercaseZ"; //  'Z'
-    const leftSquareBracket = 91; charCodes[charCodes["leftSquareBracket"] = leftSquareBracket] = "leftSquareBracket"; //  '['
-    const backslash = 92; charCodes[charCodes["backslash"] = backslash] = "backslash"; //  '\    '
-    const rightSquareBracket = 93; charCodes[charCodes["rightSquareBracket"] = rightSquareBracket] = "rightSquareBracket"; //  ']'
-    const caret = 94; charCodes[charCodes["caret"] = caret] = "caret"; //  '^'
-    const underscore = 95; charCodes[charCodes["underscore"] = underscore] = "underscore"; //  '_'
-    const graveAccent = 96; charCodes[charCodes["graveAccent"] = graveAccent] = "graveAccent"; //  '`'
-    const lowercaseA = 97; charCodes[charCodes["lowercaseA"] = lowercaseA] = "lowercaseA"; //  'a'
-    const lowercaseB = 98; charCodes[charCodes["lowercaseB"] = lowercaseB] = "lowercaseB"; //  'b'
-    const lowercaseC = 99; charCodes[charCodes["lowercaseC"] = lowercaseC] = "lowercaseC"; //  'c'
-    const lowercaseD = 100; charCodes[charCodes["lowercaseD"] = lowercaseD] = "lowercaseD"; //  'd'
-    const lowercaseE = 101; charCodes[charCodes["lowercaseE"] = lowercaseE] = "lowercaseE"; //  'e'
-    const lowercaseF = 102; charCodes[charCodes["lowercaseF"] = lowercaseF] = "lowercaseF"; //  'f'
-    const lowercaseG = 103; charCodes[charCodes["lowercaseG"] = lowercaseG] = "lowercaseG"; //  'g'
-    const lowercaseH = 104; charCodes[charCodes["lowercaseH"] = lowercaseH] = "lowercaseH"; //  'h'
-    const lowercaseI = 105; charCodes[charCodes["lowercaseI"] = lowercaseI] = "lowercaseI"; //  'i'
-    const lowercaseJ = 106; charCodes[charCodes["lowercaseJ"] = lowercaseJ] = "lowercaseJ"; //  'j'
-    const lowercaseK = 107; charCodes[charCodes["lowercaseK"] = lowercaseK] = "lowercaseK"; //  'k'
-    const lowercaseL = 108; charCodes[charCodes["lowercaseL"] = lowercaseL] = "lowercaseL"; //  'l'
-    const lowercaseM = 109; charCodes[charCodes["lowercaseM"] = lowercaseM] = "lowercaseM"; //  'm'
-    const lowercaseN = 110; charCodes[charCodes["lowercaseN"] = lowercaseN] = "lowercaseN"; //  'n'
-    const lowercaseO = 111; charCodes[charCodes["lowercaseO"] = lowercaseO] = "lowercaseO"; //  'o'
-    const lowercaseP = 112; charCodes[charCodes["lowercaseP"] = lowercaseP] = "lowercaseP"; //  'p'
-    const lowercaseQ = 113; charCodes[charCodes["lowercaseQ"] = lowercaseQ] = "lowercaseQ"; //  'q'
-    const lowercaseR = 114; charCodes[charCodes["lowercaseR"] = lowercaseR] = "lowercaseR"; //  'r'
-    const lowercaseS = 115; charCodes[charCodes["lowercaseS"] = lowercaseS] = "lowercaseS"; //  's'
-    const lowercaseT = 116; charCodes[charCodes["lowercaseT"] = lowercaseT] = "lowercaseT"; //  't'
-    const lowercaseU = 117; charCodes[charCodes["lowercaseU"] = lowercaseU] = "lowercaseU"; //  'u'
-    const lowercaseV = 118; charCodes[charCodes["lowercaseV"] = lowercaseV] = "lowercaseV"; //  'v'
-    const lowercaseW = 119; charCodes[charCodes["lowercaseW"] = lowercaseW] = "lowercaseW"; //  'w'
-    const lowercaseX = 120; charCodes[charCodes["lowercaseX"] = lowercaseX] = "lowercaseX"; //  'x'
-    const lowercaseY = 121; charCodes[charCodes["lowercaseY"] = lowercaseY] = "lowercaseY"; //  'y'
-    const lowercaseZ = 122; charCodes[charCodes["lowercaseZ"] = lowercaseZ] = "lowercaseZ"; //  'z'
-    const leftCurlyBrace = 123; charCodes[charCodes["leftCurlyBrace"] = leftCurlyBrace] = "leftCurlyBrace"; //  '{'
-    const verticalBar = 124; charCodes[charCodes["verticalBar"] = verticalBar] = "verticalBar"; //  '|'
-    const rightCurlyBrace = 125; charCodes[charCodes["rightCurlyBrace"] = rightCurlyBrace] = "rightCurlyBrace"; //  '}'
-    const tilde = 126; charCodes[charCodes["tilde"] = tilde] = "tilde"; //  '~'
+    const exclamationMark = 33; charCodes[charCodes["exclamationMark"] = exclamationMark] = "exclamationMark";
+    //  '!'
+    const quotationMark = 34; charCodes[charCodes["quotationMark"] = quotationMark] = "quotationMark";
+    //  '"'
+    const numberSign = 35; charCodes[charCodes["numberSign"] = numberSign] = "numberSign";
+    //  '#'
+    const dollarSign = 36; charCodes[charCodes["dollarSign"] = dollarSign] = "dollarSign";
+    //  '$'
+    const percentSign = 37; charCodes[charCodes["percentSign"] = percentSign] = "percentSign";
+    //  '%'
+    const ampersand = 38; charCodes[charCodes["ampersand"] = ampersand] = "ampersand";
+    //  '&'
+    const apostrophe = 39; charCodes[charCodes["apostrophe"] = apostrophe] = "apostrophe";
+    //  '''
+    const leftParenthesis = 40; charCodes[charCodes["leftParenthesis"] = leftParenthesis] = "leftParenthesis";
+    //  '('
+    const rightParenthesis = 41; charCodes[charCodes["rightParenthesis"] = rightParenthesis] = "rightParenthesis";
+    //  ')'
+    const asterisk = 42; charCodes[charCodes["asterisk"] = asterisk] = "asterisk";
+    //  '*'
+    const plusSign = 43; charCodes[charCodes["plusSign"] = plusSign] = "plusSign";
+    //  '+'
+    const comma = 44; charCodes[charCodes["comma"] = comma] = "comma";
+    //  ','
+    const dash = 45; charCodes[charCodes["dash"] = dash] = "dash";
+    //  '-'
+    const dot = 46; charCodes[charCodes["dot"] = dot] = "dot";
+    //  '.'
+    const slash = 47; charCodes[charCodes["slash"] = slash] = "slash";
+    //  '/'
+    const digit0 = 48; charCodes[charCodes["digit0"] = digit0] = "digit0";
+    //  '0'
+    const digit1 = 49; charCodes[charCodes["digit1"] = digit1] = "digit1";
+    //  '1'
+    const digit2 = 50; charCodes[charCodes["digit2"] = digit2] = "digit2";
+    //  '2'
+    const digit3 = 51; charCodes[charCodes["digit3"] = digit3] = "digit3";
+    //  '3'
+    const digit4 = 52; charCodes[charCodes["digit4"] = digit4] = "digit4";
+    //  '4'
+    const digit5 = 53; charCodes[charCodes["digit5"] = digit5] = "digit5";
+    //  '5'
+    const digit6 = 54; charCodes[charCodes["digit6"] = digit6] = "digit6";
+    //  '6'
+    const digit7 = 55; charCodes[charCodes["digit7"] = digit7] = "digit7";
+    //  '7'
+    const digit8 = 56; charCodes[charCodes["digit8"] = digit8] = "digit8";
+    //  '8'
+    const digit9 = 57; charCodes[charCodes["digit9"] = digit9] = "digit9";
+    //  '9'
+    const colon = 58; charCodes[charCodes["colon"] = colon] = "colon";
+    //  ':'
+    const semicolon2 = 59; charCodes[charCodes["semicolon"] = semicolon2] = "semicolon";
+    //  ';'
+    const lessThan = 60; charCodes[charCodes["lessThan"] = lessThan] = "lessThan";
+    //  '<'
+    const equalsTo = 61; charCodes[charCodes["equalsTo"] = equalsTo] = "equalsTo";
+    //  '='
+    const greaterThan = 62; charCodes[charCodes["greaterThan"] = greaterThan] = "greaterThan";
+    //  '>'
+    const questionMark = 63; charCodes[charCodes["questionMark"] = questionMark] = "questionMark";
+    //  '?'
+    const atSign = 64; charCodes[charCodes["atSign"] = atSign] = "atSign";
+    //  '@'
+    const uppercaseA = 65; charCodes[charCodes["uppercaseA"] = uppercaseA] = "uppercaseA";
+    //  'A'
+    const uppercaseB = 66; charCodes[charCodes["uppercaseB"] = uppercaseB] = "uppercaseB";
+    //  'B'
+    const uppercaseC = 67; charCodes[charCodes["uppercaseC"] = uppercaseC] = "uppercaseC";
+    //  'C'
+    const uppercaseD = 68; charCodes[charCodes["uppercaseD"] = uppercaseD] = "uppercaseD";
+    //  'D'
+    const uppercaseE = 69; charCodes[charCodes["uppercaseE"] = uppercaseE] = "uppercaseE";
+    //  'E'
+    const uppercaseF = 70; charCodes[charCodes["uppercaseF"] = uppercaseF] = "uppercaseF";
+    //  'F'
+    const uppercaseG = 71; charCodes[charCodes["uppercaseG"] = uppercaseG] = "uppercaseG";
+    //  'G'
+    const uppercaseH = 72; charCodes[charCodes["uppercaseH"] = uppercaseH] = "uppercaseH";
+    //  'H'
+    const uppercaseI = 73; charCodes[charCodes["uppercaseI"] = uppercaseI] = "uppercaseI";
+    //  'I'
+    const uppercaseJ = 74; charCodes[charCodes["uppercaseJ"] = uppercaseJ] = "uppercaseJ";
+    //  'J'
+    const uppercaseK = 75; charCodes[charCodes["uppercaseK"] = uppercaseK] = "uppercaseK";
+    //  'K'
+    const uppercaseL = 76; charCodes[charCodes["uppercaseL"] = uppercaseL] = "uppercaseL";
+    //  'L'
+    const uppercaseM = 77; charCodes[charCodes["uppercaseM"] = uppercaseM] = "uppercaseM";
+    //  'M'
+    const uppercaseN = 78; charCodes[charCodes["uppercaseN"] = uppercaseN] = "uppercaseN";
+    //  'N'
+    const uppercaseO = 79; charCodes[charCodes["uppercaseO"] = uppercaseO] = "uppercaseO";
+    //  'O'
+    const uppercaseP = 80; charCodes[charCodes["uppercaseP"] = uppercaseP] = "uppercaseP";
+    //  'P'
+    const uppercaseQ = 81; charCodes[charCodes["uppercaseQ"] = uppercaseQ] = "uppercaseQ";
+    //  'Q'
+    const uppercaseR = 82; charCodes[charCodes["uppercaseR"] = uppercaseR] = "uppercaseR";
+    //  'R'
+    const uppercaseS = 83; charCodes[charCodes["uppercaseS"] = uppercaseS] = "uppercaseS";
+    //  'S'
+    const uppercaseT = 84; charCodes[charCodes["uppercaseT"] = uppercaseT] = "uppercaseT";
+    //  'T'
+    const uppercaseU = 85; charCodes[charCodes["uppercaseU"] = uppercaseU] = "uppercaseU";
+    //  'U'
+    const uppercaseV = 86; charCodes[charCodes["uppercaseV"] = uppercaseV] = "uppercaseV";
+    //  'V'
+    const uppercaseW = 87; charCodes[charCodes["uppercaseW"] = uppercaseW] = "uppercaseW";
+    //  'W'
+    const uppercaseX = 88; charCodes[charCodes["uppercaseX"] = uppercaseX] = "uppercaseX";
+    //  'X'
+    const uppercaseY = 89; charCodes[charCodes["uppercaseY"] = uppercaseY] = "uppercaseY";
+    //  'Y'
+    const uppercaseZ = 90; charCodes[charCodes["uppercaseZ"] = uppercaseZ] = "uppercaseZ";
+    //  'Z'
+    const leftSquareBracket = 91; charCodes[charCodes["leftSquareBracket"] = leftSquareBracket] = "leftSquareBracket";
+    //  '['
+    const backslash = 92; charCodes[charCodes["backslash"] = backslash] = "backslash";
+    //  '\    '
+    const rightSquareBracket = 93; charCodes[charCodes["rightSquareBracket"] = rightSquareBracket] = "rightSquareBracket";
+    //  ']'
+    const caret = 94; charCodes[charCodes["caret"] = caret] = "caret";
+    //  '^'
+    const underscore = 95; charCodes[charCodes["underscore"] = underscore] = "underscore";
+    //  '_'
+    const graveAccent = 96; charCodes[charCodes["graveAccent"] = graveAccent] = "graveAccent";
+    //  '`'
+    const lowercaseA = 97; charCodes[charCodes["lowercaseA"] = lowercaseA] = "lowercaseA";
+    //  'a'
+    const lowercaseB = 98; charCodes[charCodes["lowercaseB"] = lowercaseB] = "lowercaseB";
+    //  'b'
+    const lowercaseC = 99; charCodes[charCodes["lowercaseC"] = lowercaseC] = "lowercaseC";
+    //  'c'
+    const lowercaseD = 100; charCodes[charCodes["lowercaseD"] = lowercaseD] = "lowercaseD";
+    //  'd'
+    const lowercaseE = 101; charCodes[charCodes["lowercaseE"] = lowercaseE] = "lowercaseE";
+    //  'e'
+    const lowercaseF = 102; charCodes[charCodes["lowercaseF"] = lowercaseF] = "lowercaseF";
+    //  'f'
+    const lowercaseG = 103; charCodes[charCodes["lowercaseG"] = lowercaseG] = "lowercaseG";
+    //  'g'
+    const lowercaseH = 104; charCodes[charCodes["lowercaseH"] = lowercaseH] = "lowercaseH";
+    //  'h'
+    const lowercaseI = 105; charCodes[charCodes["lowercaseI"] = lowercaseI] = "lowercaseI";
+    //  'i'
+    const lowercaseJ = 106; charCodes[charCodes["lowercaseJ"] = lowercaseJ] = "lowercaseJ";
+    //  'j'
+    const lowercaseK = 107; charCodes[charCodes["lowercaseK"] = lowercaseK] = "lowercaseK";
+    //  'k'
+    const lowercaseL = 108; charCodes[charCodes["lowercaseL"] = lowercaseL] = "lowercaseL";
+    //  'l'
+    const lowercaseM = 109; charCodes[charCodes["lowercaseM"] = lowercaseM] = "lowercaseM";
+    //  'm'
+    const lowercaseN = 110; charCodes[charCodes["lowercaseN"] = lowercaseN] = "lowercaseN";
+    //  'n'
+    const lowercaseO = 111; charCodes[charCodes["lowercaseO"] = lowercaseO] = "lowercaseO";
+    //  'o'
+    const lowercaseP = 112; charCodes[charCodes["lowercaseP"] = lowercaseP] = "lowercaseP";
+    //  'p'
+    const lowercaseQ = 113; charCodes[charCodes["lowercaseQ"] = lowercaseQ] = "lowercaseQ";
+    //  'q'
+    const lowercaseR = 114; charCodes[charCodes["lowercaseR"] = lowercaseR] = "lowercaseR";
+    //  'r'
+    const lowercaseS = 115; charCodes[charCodes["lowercaseS"] = lowercaseS] = "lowercaseS";
+    //  's'
+    const lowercaseT = 116; charCodes[charCodes["lowercaseT"] = lowercaseT] = "lowercaseT";
+    //  't'
+    const lowercaseU = 117; charCodes[charCodes["lowercaseU"] = lowercaseU] = "lowercaseU";
+    //  'u'
+    const lowercaseV = 118; charCodes[charCodes["lowercaseV"] = lowercaseV] = "lowercaseV";
+    //  'v'
+    const lowercaseW = 119; charCodes[charCodes["lowercaseW"] = lowercaseW] = "lowercaseW";
+    //  'w'
+    const lowercaseX = 120; charCodes[charCodes["lowercaseX"] = lowercaseX] = "lowercaseX";
+    //  'x'
+    const lowercaseY = 121; charCodes[charCodes["lowercaseY"] = lowercaseY] = "lowercaseY";
+    //  'y'
+    const lowercaseZ = 122; charCodes[charCodes["lowercaseZ"] = lowercaseZ] = "lowercaseZ";
+    //  'z'
+    const leftCurlyBrace = 123; charCodes[charCodes["leftCurlyBrace"] = leftCurlyBrace] = "leftCurlyBrace";
+    //  '{'
+    const verticalBar = 124; charCodes[charCodes["verticalBar"] = verticalBar] = "verticalBar";
+    //  '|'
+    const rightCurlyBrace = 125; charCodes[charCodes["rightCurlyBrace"] = rightCurlyBrace] = "rightCurlyBrace";
+    //  '}'
+    const tilde = 126; charCodes[charCodes["tilde"] = tilde] = "tilde";
+    //  '~'
     const nonBreakingSpace = 160; charCodes[charCodes["nonBreakingSpace"] = nonBreakingSpace] = "nonBreakingSpace";
     // eslint-disable-next-line no-irregular-whitespace
-    const oghamSpaceMark = 5760; charCodes[charCodes["oghamSpaceMark"] = oghamSpaceMark] = "oghamSpaceMark"; // ' '
+    const oghamSpaceMark = 5760; charCodes[charCodes["oghamSpaceMark"] = oghamSpaceMark] = "oghamSpaceMark";
+    // ' '
     const lineSeparator = 8232; charCodes[charCodes["lineSeparator"] = lineSeparator] = "lineSeparator";
     const paragraphSeparator = 8233; charCodes[charCodes["paragraphSeparator"] = paragraphSeparator] = "paragraphSeparator";
   })(charCodes || (charCodes = {}));
 
-//export let isFlowEnabled;
-  const isFlowEnabled$1 = false;
-  let state;
-  let input;
-  let nextContextId;
-
+    var isJSXEnabled = true;
+  var isTypeScriptEnabled = true;
+  var isFlowEnabled = false;
+  var state;
+  var input;
+  var nextContextId;
   function getNextContextId() {
     return nextContextId++;
   }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function augmentError(error) {
     if ("pos" in error) {
       const loc = locationForIndex(error.pos);
       error.message += ` (${loc.line}:${loc.column})`;
       error.loc = loc;
     }
+
     return error;
   }
 
   class Loc {
-
-
     constructor(line, column) {
       this.line = line;
       this.column = column;
     }
-  }
-
+  };
   function locationForIndex(pos) {
     let line = 1;
     let column = 1;
@@ -1698,26 +1976,18 @@ const transform=(()=>{
         column++;
       }
     }
+
     return new Loc(line, column);
   }
 
-  function initParser(
-    inputCode,
-    isJSXEnabledArg,
-    isTypeScriptEnabledArg,
-    isFlowEnabledArg,
-  ) {
+  function initParser(inputCode, isJSXEnabledArg, isTypeScriptEnabledArg, isFlowEnabledArg) {
     input = inputCode;
     state = new State();
     nextContextId = 1;
-//  isJSXEnabled = isJSXEnabledArg;
-//  isTypeScriptEnabled = isTypeScriptEnabledArg;
-//  isFlowEnabled = isFlowEnabledArg;
   }
 
-// ## Parser utilities
-
-// Tests whether parsed token is a contextual keyword.
+    // ## Parser utilities
+  // Tests whether parsed token is a contextual keyword.
   function isContextual(contextualKeyword) {
     return state.contextualKeyword === contextualKeyword;
   }
@@ -1727,19 +1997,19 @@ const transform=(()=>{
     return l.type === TokenType.name && l.contextualKeyword === contextualKeyword;
   }
 
-// Consumes contextual keyword if possible.
+  // Consumes contextual keyword if possible.
   function eatContextual(contextualKeyword) {
     return state.contextualKeyword === contextualKeyword && eat(TokenType.name);
   }
 
-// Asserts that following token is given contextual keyword.
+  // Asserts that following token is given contextual keyword.
   function expectContextual(contextualKeyword) {
     if (!eatContextual(contextualKeyword)) {
       unexpected();
     }
   }
 
-// Test whether a semicolon can be inserted at the current position.
+  // Test whether a semicolon can be inserted at the current position.
   function canInsertSemicolon() {
     return match(TokenType.eof) || match(TokenType.braceR) || hasPrecedingLineBreak();
   }
@@ -1749,15 +2019,11 @@ const transform=(()=>{
     const lastTokEnd = prevToken ? prevToken.end : 0;
     for (let i = lastTokEnd; i < state.start; i++) {
       const code = input.charCodeAt(i);
-      if (
-        code === charCodes.lineFeed ||
-        code === charCodes.carriageReturn ||
-        code === 0x2028 ||
-        code === 0x2029
-      ) {
+      if (code === charCodes.lineFeed || code === charCodes.carriageReturn || code === 8232 || code === 8233) {
         return true;
       }
     }
+
     return false;
   }
 
@@ -1765,15 +2031,11 @@ const transform=(()=>{
     const nextStart = nextTokenStart();
     for (let i = state.end; i < nextStart; i++) {
       const code = input.charCodeAt(i);
-      if (
-        code === charCodes.lineFeed ||
-        code === charCodes.carriageReturn ||
-        code === 0x2028 ||
-        code === 0x2029
-      ) {
+      if (code === charCodes.lineFeed || code === charCodes.carriageReturn || code === 8232 || code === 8233) {
         return true;
       }
     }
+
     return false;
   }
 
@@ -1781,16 +2043,16 @@ const transform=(()=>{
     return eat(TokenType.semi) || canInsertSemicolon();
   }
 
-// Consume a semicolon, or, failing that, see if we are allowed to
-// pretend that there is a semicolon at this position.
+  // Consume a semicolon, or, failing that, see if we are allowed to
+  // pretend that there is a semicolon at this position.
   function semicolon() {
     if (!isLineTerminator()) {
       unexpected('Unexpected token, expected ";"');
     }
   }
 
-// Expect a token of a given type. If found, consume it, otherwise,
-// raise an unexpected token error at given pos.
+  // Expect a token of a given type. If found, consume it, otherwise,
+  // raise an unexpected token error at given pos.
   function expect(type) {
     const matched = eat(type);
     if (!matched) {
@@ -1806,6 +2068,7 @@ const transform=(()=>{
     if (state.error) {
       return;
     }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const err = new SyntaxError(message);
     err.pos = pos;
@@ -1814,39 +2077,52 @@ const transform=(()=>{
     finishToken(TokenType.eof);
   }
 
-// https://tc39.github.io/ecma262/#sec-white-space
-  const WHITESPACE_CHARS = [
-    0x0009,
-    0x000b,
-    0x000c,
+    // https://tc39.github.io/ecma262/#sec-white-space
+  var WHITESPACE_CHARS = [
+    9,
+    11,
+    12,
     charCodes.space,
     charCodes.nonBreakingSpace,
     charCodes.oghamSpaceMark,
-    0x2000, // EN QUAD
-    0x2001, // EM QUAD
-    0x2002, // EN SPACE
-    0x2003, // EM SPACE
-    0x2004, // THREE-PER-EM SPACE
-    0x2005, // FOUR-PER-EM SPACE
-    0x2006, // SIX-PER-EM SPACE
-    0x2007, // FIGURE SPACE
-    0x2008, // PUNCTUATION SPACE
-    0x2009, // THIN SPACE
-    0x200a, // HAIR SPACE
-    0x202f, // NARROW NO-BREAK SPACE
-    0x205f, // MEDIUM MATHEMATICAL SPACE
-    0x3000, // IDEOGRAPHIC SPACE
-    0xfeff, // ZERO WIDTH NO-BREAK SPACE
+    8192,
+    // EN QUAD
+    8193,
+    // EM QUAD
+    8194,
+    // EN SPACE
+    8195,
+    // EM SPACE
+    8196,
+    // THREE-PER-EM SPACE
+    8197,
+    // FOUR-PER-EM SPACE
+    8198,
+    // SIX-PER-EM SPACE
+    8199,
+    // FIGURE SPACE
+    8200,
+    // PUNCTUATION SPACE
+    8201,
+    // THIN SPACE
+    8202,
+    // HAIR SPACE
+    8239,
+    // NARROW NO-BREAK SPACE
+    8287,
+    // MEDIUM MATHEMATICAL SPACE
+    12288,
+    // IDEOGRAPHIC SPACE
+    65279
+    // ZERO WIDTH NO-BREAK SPACE
   ];
-
-  const skipWhiteSpace = /(?:\s|\/\/.*|\/\*[^]*?\*\/)*/g;
-
-  const IS_WHITESPACE = new Uint8Array(65536);
+  var skipWhiteSpace = /(?:\s|\/\/.*|\/\*[^]*?\*\/)*/g;
+  var IS_WHITESPACE = new Uint8Array(65536);
   for (const char of WHITESPACE_CHARS) {
     IS_WHITESPACE[char] = 1;
   }
 
-  function computeIsIdentifierChar(code) {
+    function computeIsIdentifierChar(code) {
     if (code < 48) return code === 36;
     if (code < 58) return true;
     if (code < 65) return false;
@@ -1857,35 +2133,36 @@ const transform=(()=>{
     throw new Error("Should not be called with non-ASCII char code.");
   }
 
-  const IS_IDENTIFIER_CHAR = new Uint8Array(65536);
+  var IS_IDENTIFIER_CHAR = new Uint8Array(65536);
   for (let i = 0; i < 128; i++) {
     IS_IDENTIFIER_CHAR[i] = computeIsIdentifierChar(i) ? 1 : 0;
   }
+
   for (let i = 128; i < 65536; i++) {
     IS_IDENTIFIER_CHAR[i] = 1;
   }
-// Aside from whitespace and newlines, all characters outside the ASCII space are either
-// identifier characters or invalid. Since we're not performing code validation, we can just
-// treat all invalid characters as identifier characters.
+
+  // Aside from whitespace and newlines, all characters outside the ASCII space are either
+  // identifier characters or invalid. Since we're not performing code validation, we can just
+  // treat all invalid characters as identifier characters.
   for (const whitespaceChar of WHITESPACE_CHARS) {
     IS_IDENTIFIER_CHAR[whitespaceChar] = 0;
   }
-  IS_IDENTIFIER_CHAR[0x2028] = 0;
-  IS_IDENTIFIER_CHAR[0x2029] = 0;
 
-  const IS_IDENTIFIER_START = IS_IDENTIFIER_CHAR.slice();
+  IS_IDENTIFIER_CHAR[8232] = 0;
+  IS_IDENTIFIER_CHAR[8233] = 0;
+  var IS_IDENTIFIER_START = IS_IDENTIFIER_CHAR.slice();
   for (let numChar = charCodes.digit0; numChar <= charCodes.digit9; numChar++) {
     IS_IDENTIFIER_START[numChar] = 0;
   }
 
-// Generated file, do not edit! Run "yarn generate" to re-generate this file.
-
-// prettier-ignore
-  const READ_WORD_TREE = new Int32Array([
+    // Generated file, do not edit! Run "yarn generate" to re-generate this file.
+  // prettier-ignore
+  var READ_WORD_TREE = new Int32Array([
     // ""
-    -1, 27, 594, 729, 1566, 2187, 2673, 3294, -1, 3510, -1, 4428, 4563, 4644, 4941, 5319, 5697, -1, 6237, 6696, 7155, 7587, 7749, 7911, -1, 8127, -1,
+    -1, 27, 783, 918, 1755, 2376, 2862, 3483, -1, 3699, -1, 4617, 4752, 4833, 5130, 5508, 5940, -1, 6480, 6939, 7749, 8181, 8451, 8613, -1, 8829, -1,
     // "a"
-    -1, -1, 54, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 243, -1, -1, -1, 486, -1, -1, -1,
+    -1, -1, 54, 243, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 432, -1, -1, -1, 675, -1, -1, -1,
     // "ab"
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 81, -1, -1, -1, -1, -1, -1, -1,
     // "abs"
@@ -1900,603 +2177,654 @@ const transform=(()=>{
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 216, -1, -1, -1, -1, -1, -1,
     // "abstract"
     ContextualKeyword._abstract << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    // "as"
-    ContextualKeyword._as << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 270, -1, -1, -1, -1, -1, 405, -1,
-    // "ass"
+    // "ac"
+    -1, -1, -1, 270, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    // "acc"
     -1, -1, -1, -1, -1, 297, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    // "acce"
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 324, -1, -1, -1, -1, -1, -1, -1,
+    // "acces"
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 351, -1, -1, -1, -1, -1, -1, -1,
+    // "access"
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 378, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    // "accesso"
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 405, -1, -1, -1, -1, -1, -1, -1, -1,
+    // "accessor"
+    ContextualKeyword._accessor << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    // "as"
+    ContextualKeyword._as << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 459, -1, -1, -1, -1, -1, 594, -1,
+    // "ass"
+    -1, -1, -1, -1, -1, 486, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "asse"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 324, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 513, -1, -1, -1, -1, -1, -1, -1, -1,
     // "asser"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 351, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 540, -1, -1, -1, -1, -1, -1,
     // "assert"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 378, -1, -1, -1, -1, -1, -1, -1,
+    ContextualKeyword._assert << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 567, -1, -1, -1, -1, -1, -1, -1,
     // "asserts"
     ContextualKeyword._asserts << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "asy"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 432, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 621, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "asyn"
-    -1, -1, -1, 459, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, 648, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "async"
     ContextualKeyword._async << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "aw"
-    -1, 513, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, 702, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "awa"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, 540, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, 729, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "awai"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 567, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 756, -1, -1, -1, -1, -1, -1,
     // "await"
     ContextualKeyword._await << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "b"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 621, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 810, -1, -1, -1, -1, -1, -1, -1, -1,
     // "br"
-    -1, -1, -1, -1, -1, 648, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 837, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "bre"
-    -1, 675, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, 864, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "brea"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 702, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 891, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "break"
     (TokenType._break << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "c"
-    -1, 756, -1, -1, -1, -1, -1, -1, 918, -1, -1, -1, 1053, -1, -1, 1161, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, 945, -1, -1, -1, -1, -1, -1, 1107, -1, -1, -1, 1242, -1, -1, 1350, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "ca"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 783, 837, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 972, 1026, -1, -1, -1, -1, -1, -1,
     // "cas"
-    -1, -1, -1, -1, -1, 810, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 999, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "case"
     (TokenType._case << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "cat"
-    -1, -1, -1, 864, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, 1053, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "catc"
-    -1, -1, -1, -1, -1, -1, -1, -1, 891, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, 1080, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "catch"
     (TokenType._catch << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "ch"
-    -1, -1, -1, -1, -1, 945, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 1134, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "che"
-    -1, -1, -1, 972, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, 1161, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "chec"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 999, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1188, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "check"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1026, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1215, -1, -1, -1, -1, -1, -1, -1,
     // "checks"
     ContextualKeyword._checks << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "cl"
-    -1, 1080, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, 1269, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "cla"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1107, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1296, -1, -1, -1, -1, -1, -1, -1,
     // "clas"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1134, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1323, -1, -1, -1, -1, -1, -1, -1,
     // "class"
     (TokenType._class << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "co"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1188, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1377, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "con"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1215, 1431, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1404, 1620, -1, -1, -1, -1, -1, -1,
     // "cons"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1242, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1431, -1, -1, -1, -1, -1, -1,
     // "const"
-    (TokenType._const << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1269, -1, -1, -1, -1, -1, -1, -1, -1,
+    (TokenType._const << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1458, -1, -1, -1, -1, -1, -1, -1, -1,
     // "constr"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1296, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1485, -1, -1, -1, -1, -1,
     // "constru"
-    -1, -1, -1, 1323, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, 1512, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "construc"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1350, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1539, -1, -1, -1, -1, -1, -1,
     // "construct"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1377, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1566, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "constructo"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1404, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1593, -1, -1, -1, -1, -1, -1, -1, -1,
     // "constructor"
     ContextualKeyword._constructor << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "cont"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, 1458, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, 1647, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "conti"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1485, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1674, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "contin"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1512, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1701, -1, -1, -1, -1, -1,
     // "continu"
-    -1, -1, -1, -1, -1, 1539, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 1728, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "continue"
     (TokenType._continue << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "d"
-    -1, -1, -1, -1, -1, 1593, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2160, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 1782, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2349, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "de"
-    -1, -1, 1620, 1782, -1, -1, 1917, -1, -1, -1, -1, -1, 2052, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, 1809, 1971, -1, -1, 2106, -1, -1, -1, -1, -1, 2241, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "deb"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1647, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1836, -1, -1, -1, -1, -1,
     // "debu"
-    -1, -1, -1, -1, -1, -1, -1, 1674, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, 1863, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "debug"
-    -1, -1, -1, -1, -1, -1, -1, 1701, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, 1890, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "debugg"
-    -1, -1, -1, -1, -1, 1728, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 1917, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "debugge"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1755, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1944, -1, -1, -1, -1, -1, -1, -1, -1,
     // "debugger"
     (TokenType._debugger << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "dec"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1809, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1998, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "decl"
-    -1, 1836, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, 2025, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "decla"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1863, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2052, -1, -1, -1, -1, -1, -1, -1, -1,
     // "declar"
-    -1, -1, -1, -1, -1, 1890, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 2079, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "declare"
     ContextualKeyword._declare << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "def"
-    -1, 1944, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, 2133, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "defa"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1971, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2160, -1, -1, -1, -1, -1,
     // "defau"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1998, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2187, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "defaul"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2025, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2214, -1, -1, -1, -1, -1, -1,
     // "default"
     (TokenType._default << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "del"
-    -1, -1, -1, -1, -1, 2079, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 2268, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "dele"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2106, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2295, -1, -1, -1, -1, -1, -1,
     // "delet"
-    -1, -1, -1, -1, -1, 2133, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 2322, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "delete"
     (TokenType._delete << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "do"
     (TokenType._do << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "e"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2214, -1, 2295, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2376, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2403, -1, 2484, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2565, -1, -1,
     // "el"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2241, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2430, -1, -1, -1, -1, -1, -1, -1,
     // "els"
-    -1, -1, -1, -1, -1, 2268, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 2457, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "else"
     (TokenType._else << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "en"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2322, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2511, -1, -1, -1, -1, -1,
     // "enu"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2349, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2538, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "enum"
     ContextualKeyword._enum << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "ex"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2403, -1, -1, -1, 2538, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2592, -1, -1, -1, 2727, -1, -1, -1, -1, -1, -1,
     // "exp"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2430, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2619, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "expo"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2457, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2646, -1, -1, -1, -1, -1, -1, -1, -1,
     // "expor"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2484, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2673, -1, -1, -1, -1, -1, -1,
     // "export"
-    (TokenType._export << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2511, -1, -1, -1, -1, -1, -1, -1,
+    (TokenType._export << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2700, -1, -1, -1, -1, -1, -1, -1,
     // "exports"
     ContextualKeyword._exports << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "ext"
-    -1, -1, -1, -1, -1, 2565, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 2754, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "exte"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2592, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2781, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "exten"
-    -1, -1, -1, -1, 2619, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, 2808, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "extend"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2646, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2835, -1, -1, -1, -1, -1, -1, -1,
     // "extends"
     (TokenType._extends << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "f"
-    -1, 2700, -1, -1, -1, -1, -1, -1, -1, 2808, -1, -1, -1, -1, -1, 2970, -1, -1, 3024, -1, -1, 3105, -1, -1, -1, -1, -1,
+    -1, 2889, -1, -1, -1, -1, -1, -1, -1, 2997, -1, -1, -1, -1, -1, 3159, -1, -1, 3213, -1, -1, 3294, -1, -1, -1, -1, -1,
     // "fa"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2727, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2916, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "fal"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2754, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2943, -1, -1, -1, -1, -1, -1, -1,
     // "fals"
-    -1, -1, -1, -1, -1, 2781, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 2970, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "false"
     (TokenType._false << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "fi"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2835, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3024, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "fin"
-    -1, 2862, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, 3051, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "fina"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2889, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3078, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "final"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2916, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3105, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "finall"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2943, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3132, -1,
     // "finally"
     (TokenType._finally << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "fo"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2997, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3186, -1, -1, -1, -1, -1, -1, -1, -1,
     // "for"
     (TokenType._for << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "fr"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3051, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3240, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "fro"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3078, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3267, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "from"
     ContextualKeyword._from << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "fu"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3132, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3321, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "fun"
-    -1, -1, -1, 3159, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, 3348, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "func"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3186, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3375, -1, -1, -1, -1, -1, -1,
     // "funct"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, 3213, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, 3402, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "functi"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3240, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3429, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "functio"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3267, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3456, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "function"
     (TokenType._function << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "g"
-    -1, -1, -1, -1, -1, 3321, -1, -1, -1, -1, -1, -1, 3375, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 3510, -1, -1, -1, -1, -1, -1, 3564, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "ge"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3348, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3537, -1, -1, -1, -1, -1, -1,
     // "get"
     ContextualKeyword._get << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "gl"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3402, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3591, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "glo"
-    -1, -1, 3429, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, 3618, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "glob"
-    -1, 3456, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, 3645, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "globa"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3483, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3672, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "global"
     ContextualKeyword._global << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "i"
-    -1, -1, -1, -1, -1, -1, 3537, -1, -1, -1, -1, -1, -1, 3564, 3888, -1, -1, -1, -1, 4401, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, 3726, -1, -1, -1, -1, -1, -1, 3753, 4077, -1, -1, -1, -1, 4590, -1, -1, -1, -1, -1, -1, -1,
     // "if"
     (TokenType._if << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "im"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3591, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3780, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "imp"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3618, -1, -1, 3807, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3807, -1, -1, 3996, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "impl"
-    -1, -1, -1, -1, -1, 3645, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 3834, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "imple"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3672, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3861, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "implem"
-    -1, -1, -1, -1, -1, 3699, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 3888, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "impleme"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3726, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3915, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "implemen"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3753, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3942, -1, -1, -1, -1, -1, -1,
     // "implement"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3780, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3969, -1, -1, -1, -1, -1, -1, -1,
     // "implements"
     ContextualKeyword._implements << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "impo"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3834, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 4023, -1, -1, -1, -1, -1, -1, -1, -1,
     // "impor"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3861, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 4050, -1, -1, -1, -1, -1, -1,
     // "import"
     (TokenType._import << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "in"
-    (TokenType._in << 1) + 1, -1, -1, -1, -1, -1, 3915, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3996, 4212, -1, -1, -1, -1, -1, -1,
+    (TokenType._in << 1) + 1, -1, -1, -1, -1, -1, 4104, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 4185, 4401, -1, -1, -1, -1, -1, -1,
     // "inf"
-    -1, -1, -1, -1, -1, 3942, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 4131, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "infe"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3969, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 4158, -1, -1, -1, -1, -1, -1, -1, -1,
     // "infer"
     ContextualKeyword._infer << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "ins"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 4023, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 4212, -1, -1, -1, -1, -1, -1,
     // "inst"
-    -1, 4050, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, 4239, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "insta"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 4077, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 4266, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "instan"
-    -1, -1, -1, 4104, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, 4293, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "instanc"
-    -1, -1, -1, -1, -1, 4131, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 4320, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "instance"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 4158, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 4347, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "instanceo"
-    -1, -1, -1, -1, -1, -1, 4185, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, 4374, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "instanceof"
     (TokenType._instanceof << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "int"
-    -1, -1, -1, -1, -1, 4239, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 4428, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "inte"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 4266, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 4455, -1, -1, -1, -1, -1, -1, -1, -1,
     // "inter"
-    -1, -1, -1, -1, -1, -1, 4293, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, 4482, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "interf"
-    -1, 4320, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, 4509, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "interfa"
-    -1, -1, -1, 4347, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, 4536, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "interfac"
-    -1, -1, -1, -1, -1, 4374, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 4563, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "interface"
     ContextualKeyword._interface << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "is"
     ContextualKeyword._is << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "k"
-    -1, -1, -1, -1, -1, 4455, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 4644, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "ke"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 4482, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 4671, -1,
     // "key"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 4509, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 4698, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "keyo"
-    -1, -1, -1, -1, -1, -1, 4536, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, 4725, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "keyof"
     ContextualKeyword._keyof << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "l"
-    -1, -1, -1, -1, -1, 4590, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 4779, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "le"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 4617, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 4806, -1, -1, -1, -1, -1, -1,
     // "let"
     (TokenType._let << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "m"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, 4671, -1, -1, -1, -1, -1, 4806, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, 4860, -1, -1, -1, -1, -1, 4995, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "mi"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 4698, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 4887, -1, -1,
     // "mix"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, 4725, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, 4914, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "mixi"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 4752, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 4941, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "mixin"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 4779, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 4968, -1, -1, -1, -1, -1, -1, -1,
     // "mixins"
     ContextualKeyword._mixins << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "mo"
-    -1, -1, -1, -1, 4833, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, 5022, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "mod"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 4860, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5049, -1, -1, -1, -1, -1,
     // "modu"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 4887, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5076, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "modul"
-    -1, -1, -1, -1, -1, 4914, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 5103, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "module"
     ContextualKeyword._module << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "n"
-    -1, 4968, -1, -1, -1, 5184, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5238, -1, -1, -1, -1, -1,
+    -1, 5157, -1, -1, -1, 5373, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5427, -1, -1, -1, -1, -1,
     // "na"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 4995, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5184, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "nam"
-    -1, -1, -1, -1, -1, 5022, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 5211, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "name"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5049, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5238, -1, -1, -1, -1, -1, -1, -1,
     // "names"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5076, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5265, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "namesp"
-    -1, 5103, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, 5292, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "namespa"
-    -1, -1, -1, 5130, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, 5319, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "namespac"
-    -1, -1, -1, -1, -1, 5157, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 5346, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "namespace"
     ContextualKeyword._namespace << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "ne"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5211, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5400, -1, -1, -1,
     // "new"
     (TokenType._new << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "nu"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5265, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5454, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "nul"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5292, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5481, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "null"
     (TokenType._null << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "o"
-    -1, -1, -1, -1, -1, -1, 5346, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5373, -1, -1, -1, -1, -1, 5508, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, 5535, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5562, -1, -1, -1, -1, 5697, 5751, -1, -1, -1, -1,
     // "of"
     ContextualKeyword._of << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "op"
-    -1, 5400, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, 5589, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "opa"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5427, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5616, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "opaq"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5454, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5643, -1, -1, -1, -1, -1,
     // "opaqu"
-    -1, -1, -1, -1, -1, 5481, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 5670, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "opaque"
     ContextualKeyword._opaque << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    // "ou"
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5724, -1, -1, -1, -1, -1, -1,
+    // "out"
+    ContextualKeyword._out << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "ov"
-    -1, -1, -1, -1, -1, 5535, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 5778, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "ove"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5562, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5805, -1, -1, -1, -1, -1, -1, -1, -1,
     // "over"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5589, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5832, -1, -1, -1, -1, -1, -1, -1, -1,
     // "overr"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, 5616, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, 5859, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "overri"
-    -1, -1, -1, -1, 5643, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, 5886, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "overrid"
-    -1, -1, -1, -1, -1, 5670, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 5913, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "override"
     ContextualKeyword._override << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "p"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5724, -1, -1, 6102, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5967, -1, -1, 6345, -1, -1, -1, -1, -1,
     // "pr"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, 5751, -1, -1, -1, -1, -1, 5886, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, 5994, -1, -1, -1, -1, -1, 6129, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "pri"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5778, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6021, -1, -1, -1, -1,
     // "priv"
-    -1, 5805, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, 6048, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "priva"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5832, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6075, -1, -1, -1, -1, -1, -1,
     // "privat"
-    -1, -1, -1, -1, -1, 5859, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 6102, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "private"
     ContextualKeyword._private << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "pro"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5913, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6156, -1, -1, -1, -1, -1, -1,
     // "prot"
-    -1, -1, -1, -1, -1, 5940, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6075, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 6183, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6318, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "prote"
-    -1, -1, -1, 5967, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, 6210, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "protec"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5994, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6237, -1, -1, -1, -1, -1, -1,
     // "protect"
-    -1, -1, -1, -1, -1, 6021, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 6264, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "protecte"
-    -1, -1, -1, -1, 6048, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, 6291, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "protected"
     ContextualKeyword._protected << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "proto"
     ContextualKeyword._proto << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "pu"
-    -1, -1, 6129, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, 6372, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "pub"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6156, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6399, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "publ"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, 6183, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, 6426, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "publi"
-    -1, -1, -1, 6210, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, 6453, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "public"
     ContextualKeyword._public << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "r"
-    -1, -1, -1, -1, -1, 6264, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 6507, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "re"
-    -1, 6291, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6453, -1, -1, 6588, -1, -1, -1, -1, -1, -1,
+    -1, 6534, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6696, -1, -1, 6831, -1, -1, -1, -1, -1, -1,
     // "rea"
-    -1, -1, -1, -1, 6318, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, 6561, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "read"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6345, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6588, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "reado"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6372, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6615, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "readon"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6399, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6642, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "readonl"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6426, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6669, -1,
     // "readonly"
     ContextualKeyword._readonly << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "req"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6480, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6723, -1, -1, -1, -1, -1,
     // "requ"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, 6507, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, 6750, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "requi"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6534, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6777, -1, -1, -1, -1, -1, -1, -1, -1,
     // "requir"
-    -1, -1, -1, -1, -1, 6561, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 6804, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "require"
     ContextualKeyword._require << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "ret"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6615, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6858, -1, -1, -1, -1, -1,
     // "retu"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6642, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6885, -1, -1, -1, -1, -1, -1, -1, -1,
     // "retur"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6669, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6912, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "return"
     (TokenType._return << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "s"
-    -1, -1, -1, -1, -1, 6723, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6777, 6912, -1, 7020, -1, -1, -1,
+    -1, 6966, -1, -1, -1, 7182, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7236, 7371, -1, 7479, -1, 7614, -1,
+    // "sa"
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6993, -1, -1, -1, -1, -1, -1,
+    // "sat"
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, 7020, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    // "sati"
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7047, -1, -1, -1, -1, -1, -1, -1,
+    // "satis"
+    -1, -1, -1, -1, -1, -1, 7074, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    // "satisf"
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, 7101, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    // "satisfi"
+    -1, -1, -1, -1, -1, 7128, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    // "satisfie"
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7155, -1, -1, -1, -1, -1, -1, -1,
+    // "satisfies"
+    ContextualKeyword._satisfies << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "se"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6750, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7209, -1, -1, -1, -1, -1, -1,
     // "set"
     ContextualKeyword._set << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "st"
-    -1, 6804, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, 7263, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "sta"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6831, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7290, -1, -1, -1, -1, -1, -1,
     // "stat"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, 6858, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, 7317, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "stati"
-    -1, -1, -1, 6885, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, 7344, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "static"
     ContextualKeyword._static << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "su"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6939, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7398, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "sup"
-    -1, -1, -1, -1, -1, 6966, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 7425, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "supe"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6993, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7452, -1, -1, -1, -1, -1, -1, -1, -1,
     // "super"
     (TokenType._super << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "sw"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, 7047, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, 7506, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "swi"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7074, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7533, -1, -1, -1, -1, -1, -1,
     // "swit"
-    -1, -1, -1, 7101, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, 7560, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "switc"
-    -1, -1, -1, -1, -1, -1, -1, -1, 7128, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, 7587, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "switch"
     (TokenType._switch << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    // "sy"
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7641, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    // "sym"
+    -1, -1, 7668, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    // "symb"
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7695, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    // "symbo"
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7722, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    // "symbol"
+    ContextualKeyword._symbol << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "t"
-    -1, -1, -1, -1, -1, -1, -1, -1, 7182, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7344, -1, -1, -1, -1, -1, -1, 7452, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, 7776, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7938, -1, -1, -1, -1, -1, -1, 8046, -1,
     // "th"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, 7209, -1, -1, -1, -1, -1, -1, -1, -1, 7263, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, 7803, -1, -1, -1, -1, -1, -1, -1, -1, 7857, -1, -1, -1, -1, -1, -1, -1, -1,
     // "thi"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7236, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7830, -1, -1, -1, -1, -1, -1, -1,
     // "this"
     (TokenType._this << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "thr"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7290, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7884, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "thro"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7317, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7911, -1, -1, -1,
     // "throw"
     (TokenType._throw << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "tr"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7371, -1, -1, -1, 7425, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7965, -1, -1, -1, 8019, -1,
     // "tru"
-    -1, -1, -1, -1, -1, 7398, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 7992, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "true"
     (TokenType._true << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "try"
     (TokenType._try << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "ty"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7479, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 8073, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "typ"
-    -1, -1, -1, -1, -1, 7506, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 8100, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "type"
-    ContextualKeyword._type << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7533, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    ContextualKeyword._type << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 8127, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "typeo"
-    -1, -1, -1, -1, -1, -1, 7560, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, 8154, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "typeof"
     (TokenType._typeof << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "u"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7614, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 8208, -1, -1, -1, -1, 8343, -1, -1, -1, -1, -1, -1, -1,
     // "un"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, 7641, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, 8235, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "uni"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7668, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 8262, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "uniq"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7695, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 8289, -1, -1, -1, -1, -1,
     // "uniqu"
-    -1, -1, -1, -1, -1, 7722, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 8316, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "unique"
     ContextualKeyword._unique << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    // "us"
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, 8370, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    // "usi"
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 8397, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    // "usin"
+    -1, -1, -1, -1, -1, -1, -1, 8424, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    // "using"
+    ContextualKeyword._using << 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "v"
-    -1, 7776, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7830, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, 8478, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 8532, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "va"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7803, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 8505, -1, -1, -1, -1, -1, -1, -1, -1,
     // "var"
     (TokenType._var << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "vo"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, 7857, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, 8559, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "voi"
-    -1, -1, -1, -1, 7884, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, 8586, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "void"
     (TokenType._void << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "w"
-    -1, -1, -1, -1, -1, -1, -1, -1, 7938, 8046, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, 8640, 8748, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "wh"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, 7965, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, 8667, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "whi"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7992, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 8694, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "whil"
-    -1, -1, -1, -1, -1, 8019, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 8721, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "while"
     (TokenType._while << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "wi"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 8073, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 8775, -1, -1, -1, -1, -1, -1,
     // "wit"
-    -1, -1, -1, -1, -1, -1, -1, -1, 8100, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, 8802, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "with"
     (TokenType._with << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "y"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, 8154, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, 8856, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "yi"
-    -1, -1, -1, -1, -1, 8181, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, 8883, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "yie"
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 8208, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 8910, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "yiel"
-    -1, -1, -1, -1, 8235, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, 8937, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     // "yield"
-    (TokenType._yield << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-  ]);
+    (TokenType._yield << 1) + 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]);
 
-  /**
+    /**
    * Read an identifier, producing either a name token or matching on one of the existing keywords.
    * For performance, we pre-generate big decision tree that we traverse. Each node represents a
    * prefix and has 27 values, where the first value is the token or contextual token, if any (-1 if
@@ -2511,11 +2839,11 @@ const transform=(()=>{
       if (code < charCodes.lowercaseA || code > charCodes.lowercaseZ) {
         break;
       }
-      const next = READ_WORD_TREE[treePos + (code - charCodes.lowercaseA) + 1];
-      if (next === -1) {
+      const next2 = READ_WORD_TREE[treePos + (code - charCodes.lowercaseA) + 1];
+      if (next2 === -1) {
         break;
       } else {
-        treePos = next;
+        treePos = next2;
         pos++;
       }
     }
@@ -2550,13 +2878,14 @@ const transform=(()=>{
         break;
       }
     }
+
     state.pos = pos;
     finishToken(TokenType.name);
   }
 
-  /* eslint max-len: 0 */
-
-  var IdentifierRole; (function (IdentifierRole) {
+    /* eslint max-len: 0 */
+  var IdentifierRole;
+  (function(IdentifierRole) {
     const Access = 0; IdentifierRole[IdentifierRole["Access"] = Access] = "Access";
     const ExportAccess = Access + 1; IdentifierRole[IdentifierRole["ExportAccess"] = ExportAccess] = "ExportAccess";
     const TopLevelDeclaration = ExportAccess + 1; IdentifierRole[IdentifierRole["TopLevelDeclaration"] = TopLevelDeclaration] = "TopLevelDeclaration";
@@ -2573,48 +2902,54 @@ const transform=(()=>{
     // The `foo` in `import {foo as bar} from "./abc";`.
     const ImportAccess = ObjectKey + 1; IdentifierRole[IdentifierRole["ImportAccess"] = ImportAccess] = "ImportAccess";
   })(IdentifierRole || (IdentifierRole = {}));
-
+  /**
+   * Extra information on jsxTagStart tokens, used to determine which of the three
+   * jsx functions are called in the automatic transform.
+   */
+  var JSXRole;
+  (function(JSXRole2) {
+    // The element is self-closing or has a body that resolves to empty. We
+    // shouldn't emit children at all in this case.
+    const NoChildren = 0;
+    JSXRole2[JSXRole2["NoChildren"] = NoChildren] = "NoChildren";
+    // The element has a single explicit child, which might still be an arbitrary
+    // expression like an array. We should emit that expression as the children.
+    const OneChild = NoChildren + 1;
+    JSXRole2[JSXRole2["OneChild"] = OneChild] = "OneChild";
+    // The element has at least two explicitly-specified children or has spread
+    // children, so child positions are assumed to be "static". We should wrap
+    // these children in an array.
+    const StaticChildren = OneChild + 1;
+    JSXRole2[JSXRole2["StaticChildren"] = StaticChildren] = "StaticChildren";
+    // The element has a prop named "key" after a prop spread, so we should fall
+    // back to the createElement function.
+    const KeyAfterPropSpread = StaticChildren + 1;
+    JSXRole2[JSXRole2["KeyAfterPropSpread"] = KeyAfterPropSpread] = "KeyAfterPropSpread";
+  })(JSXRole || (JSXRole = {}));
   function isNonTopLevelDeclaration(token) {
     const role = token.identifierRole;
-    return (
-      role === IdentifierRole.FunctionScopedDeclaration ||
-      role === IdentifierRole.BlockScopedDeclaration ||
-      role === IdentifierRole.ObjectShorthandFunctionScopedDeclaration ||
-      role === IdentifierRole.ObjectShorthandBlockScopedDeclaration
-    );
+    return role === IdentifierRole.FunctionScopedDeclaration || role === IdentifierRole.BlockScopedDeclaration || role === IdentifierRole.ObjectShorthandFunctionScopedDeclaration || role === IdentifierRole.ObjectShorthandBlockScopedDeclaration;
   }
 
   function isTopLevelDeclaration(token) {
     const role = token.identifierRole;
-    return (
-      role === IdentifierRole.TopLevelDeclaration ||
-      role === IdentifierRole.ObjectShorthandTopLevelDeclaration ||
-      role === IdentifierRole.ImportDeclaration
-    );
+    return role === IdentifierRole.TopLevelDeclaration || role === IdentifierRole.ObjectShorthandTopLevelDeclaration || role === IdentifierRole.ImportDeclaration;
   }
 
   function isBlockScopedDeclaration(token) {
     const role = token.identifierRole;
     // Treat top-level declarations as block scope since the distinction doesn't matter here.
-    return (
-      role === IdentifierRole.TopLevelDeclaration ||
-      role === IdentifierRole.BlockScopedDeclaration ||
-      role === IdentifierRole.ObjectShorthandTopLevelDeclaration ||
-      role === IdentifierRole.ObjectShorthandBlockScopedDeclaration
-    );
+    return role === IdentifierRole.TopLevelDeclaration || role === IdentifierRole.BlockScopedDeclaration || role === IdentifierRole.ObjectShorthandTopLevelDeclaration || role === IdentifierRole.ObjectShorthandBlockScopedDeclaration;
   }
 
   function isFunctionScopedDeclaration(token) {
     const role = token.identifierRole;
-    return (
-      role === IdentifierRole.FunctionScopedDeclaration ||
-      role === IdentifierRole.ObjectShorthandFunctionScopedDeclaration
-    );
+    return role === IdentifierRole.FunctionScopedDeclaration || role === IdentifierRole.ObjectShorthandFunctionScopedDeclaration;
   }
 
-// Object type used to represent tokens. Note that normally, tokens
-// simply exist as properties on the parser object. This is only
-// used for the onToken callback and the external tokenizer.
+  // Object type used to represent tokens. Note that normally, tokens
+  // simply exist as properties on the parser object. This is only
+  // used for the onToken callback and the external tokenizer.
   class Token {
     constructor() {
       this.type = state.type;
@@ -2624,6 +2959,7 @@ const transform=(()=>{
       this.scopeDepth = state.scopeDepth;
       this.isType = state.isType;
       this.identifierRole = null;
+      this.jsxRole = null;
       this.shadowsGlobal = false;
       this.isAsyncOperation = false;
       this.contextId = null;
@@ -2637,60 +2973,41 @@ const transform=(()=>{
       this.nullishStartIndex = null;
     }
 
-
-
-
-
-
-
-
     // Initially false for all tokens, then may be computed in a follow-up step that does scope
     // analysis.
-
     // Initially false for all tokens, but may be set during transform to mark it as containing an
     // await operation.
-
-
     // For assignments, the index of the RHS. For export tokens, the end of the export.
-
     // For class tokens, records if the class is a class expression or a class statement.
-
     // Number of times to insert a `nullishCoalesce(` snippet before this token.
-
     // Number of times to insert a `)` snippet after this token.
-
     // If true, insert an `optionalChain([` snippet before this token.
-
     // If true, insert a `])` snippet after this token.
-
     // Tag for `.`, `?.`, `[`, `?.[`, `(`, and `?.(` to denote the "root" token for this
     // subscript chain. This can be used to determine if this chain is an optional chain.
-
     // Tag for `??` operators to denote the root token for this nullish coalescing call.
-
-  }
-
-// ## Tokenizer
-
-// Move to the next token
+  };
+  // ## Tokenizer
+  // Move to the next token
   function next() {
     state.tokens.push(new Token());
     nextToken();
   }
 
-// Call instead of next when inside a template, since that needs to be handled differently.
+  // Call instead of next when inside a template, since that needs to be handled differently.
   function nextTemplateToken() {
     state.tokens.push(new Token());
     state.start = state.pos;
     readTmplToken();
   }
 
-// The tokenizer never parses regexes by default. Instead, the parser is responsible for
-// instructing it to parse a regex when we see a slash at the start of an expression.
+  // The tokenizer never parses regexes by default. Instead, the parser is responsible for
+  // instructing it to parse a regex when we see a slash at the start of an expression.
   function retokenizeSlashAsRegex() {
     if (state.type === TokenType.assign) {
       --state.pos;
     }
+
     readRegexp();
   }
 
@@ -2698,6 +3015,7 @@ const transform=(()=>{
     for (let i = state.tokens.length - existingTokensInType; i < state.tokens.length; i++) {
       state.tokens[i].isType = true;
     }
+
     const oldIsType = state.isType;
     state.isType = true;
     return oldIsType;
@@ -2736,14 +3054,11 @@ const transform=(()=>{
   }
 
   class TypeAndKeyword {
-
-
     constructor(type, contextualKeyword) {
       this.type = type;
       this.contextualKeyword = contextualKeyword;
     }
-  }
-
+  };
   function lookaheadTypeAndKeyword() {
     const snapshot = state.snapshot();
     next();
@@ -2767,8 +3082,8 @@ const transform=(()=>{
     return input.charCodeAt(nextTokenStart());
   }
 
-// Read a single token, updating the parser object's token-related
-// properties.
+  // Read a single token, updating the parser object's token-related
+  // properties.
   function nextToken() {
     skipSpace();
     state.start = state.pos;
@@ -2777,27 +3092,20 @@ const transform=(()=>{
       // We normally run past the end a bit, but if we're way past the end, avoid an infinite loop.
       // Also check the token positions rather than the types since sometimes we rewrite the token
       // type to something else.
-      if (
-        tokens.length >= 2 &&
-        tokens[tokens.length - 1].start >= input.length &&
-        tokens[tokens.length - 2].start >= input.length
-      ) {
+      if (tokens.length >= 2 && tokens[tokens.length - 1].start >= input.length && tokens[tokens.length - 2].start >= input.length) {
         unexpected("Unexpectedly reached the end of input.");
       }
       finishToken(TokenType.eof);
       return;
     }
+
     readToken(input.charCodeAt(state.pos));
   }
 
   function readToken(code) {
     // Identifier or keyword. '\uXXXX' sequences are allowed in
     // identifiers, so '\' also dispatches to that.
-    if (
-      IS_IDENTIFIER_START[code] ||
-      code === charCodes.backslash ||
-      (code === charCodes.atSign && input.charCodeAt(state.pos + 1) === charCodes.atSign)
-    ) {
+    if (IS_IDENTIFIER_START[code] || code === charCodes.backslash || code === charCodes.atSign && input.charCodeAt(state.pos + 1) === charCodes.atSign) {
       readWord();
     } else {
       getTokenFromCode(code);
@@ -2805,36 +3113,28 @@ const transform=(()=>{
   }
 
   function skipBlockComment() {
-    while (
-      input.charCodeAt(state.pos) !== charCodes.asterisk ||
-      input.charCodeAt(state.pos + 1) !== charCodes.slash
-      ) {
+    while (input.charCodeAt(state.pos) !== charCodes.asterisk || input.charCodeAt(state.pos + 1) !== charCodes.slash) {
       state.pos++;
       if (state.pos > input.length) {
         unexpected("Unterminated comment", state.pos - 2);
         return;
       }
     }
+
     state.pos += 2;
   }
 
   function skipLineComment(startSkip) {
-    let ch = input.charCodeAt((state.pos += startSkip));
+    let ch = input.charCodeAt(state.pos += startSkip);
     if (state.pos < input.length) {
-      while (
-        ch !== charCodes.lineFeed &&
-        ch !== charCodes.carriageReturn &&
-        ch !== charCodes.lineSeparator &&
-        ch !== charCodes.paragraphSeparator &&
-        ++state.pos < input.length
-        ) {
+      while (ch !== charCodes.lineFeed && ch !== charCodes.carriageReturn && ch !== charCodes.lineSeparator && ch !== charCodes.paragraphSeparator && ++state.pos < input.length) {
         ch = input.charCodeAt(state.pos);
       }
     }
   }
 
-// Called at the start of the parse and after every token. Skips
-// whitespace and comments.
+  // Called at the start of the parse and after every token. Skips
+  // whitespace and comments.
   function skipSpace() {
     while (state.pos < input.length) {
       const ch = input.charCodeAt(state.pos);
@@ -2843,29 +3143,24 @@ const transform=(()=>{
           if (input.charCodeAt(state.pos + 1) === charCodes.lineFeed) {
             ++state.pos;
           }
-
         case charCodes.lineFeed:
         case charCodes.lineSeparator:
         case charCodes.paragraphSeparator:
           ++state.pos;
           break;
-
         case charCodes.slash:
           switch (input.charCodeAt(state.pos + 1)) {
             case charCodes.asterisk:
               state.pos += 2;
               skipBlockComment();
               break;
-
             case charCodes.slash:
               skipLineComment(2);
               break;
-
             default:
               return;
           }
           break;
-
         default:
           if (IS_WHITESPACE[ch]) {
             ++state.pos;
@@ -2876,25 +3171,21 @@ const transform=(()=>{
     }
   }
 
-// Called at the end of every token. Sets various fields, and skips the space after the token, so
-// that the next one's `start` will point at the right position.
-  function finishToken(
-    type,
-    contextualKeyword = ContextualKeyword.NONE,
-  ) {
+  // Called at the end of every token. Sets various fields, and skips the space after the token, so
+  // that the next one's `start` will point at the right position.
+  function finishToken(type, contextualKeyword = ContextualKeyword.NONE) {
     state.end = state.pos;
     state.type = type;
     state.contextualKeyword = contextualKeyword;
   }
 
-// ### Token reading
-
-// This is the function that is called to fetch the next token. It
-// is somewhat obscure, because it works in character codes rather
-// than characters, and because operator parsing has been inlined
-// into it.
-//
-// All in the name of speed.
+  // ### Token reading
+  // This is the function that is called to fetch the next token. It
+  // is somewhat obscure, because it works in character codes rather
+  // than characters, and because operator parsing has been inlined
+  // into it.
+  //
+  // All in the name of speed.
   function readToken_dot() {
     const nextChar = input.charCodeAt(state.pos + 1);
     if (nextChar >= charCodes.digit0 && nextChar <= charCodes.digit9) {
@@ -2925,7 +3216,6 @@ const transform=(()=>{
     let tokenType = code === charCodes.asterisk ? TokenType.star : TokenType.modulo;
     let width = 1;
     let nextChar = input.charCodeAt(state.pos + 1);
-
     // Exponentiation operator **
     if (code === charCodes.asterisk && nextChar === charCodes.asterisk) {
       width++;
@@ -2934,10 +3224,7 @@ const transform=(()=>{
     }
 
     // Match *= or %=, disallowing *=> which can be valid in flow.
-    if (
-      nextChar === charCodes.equalsTo &&
-      input.charCodeAt(state.pos + 2) !== charCodes.greaterThan
-    ) {
+    if (nextChar === charCodes.equalsTo && input.charCodeAt(state.pos + 2) !== charCodes.greaterThan) {
       width++;
       tokenType = TokenType.assign;
     }
@@ -2948,7 +3235,6 @@ const transform=(()=>{
   function readToken_pipe_amp(code) {
     // '|&'
     const nextChar = input.charCodeAt(state.pos + 1);
-
     if (nextChar === code) {
       if (input.charCodeAt(state.pos + 2) === charCodes.equalsTo) {
         // ||= or &&=
@@ -2965,7 +3251,7 @@ const transform=(()=>{
       if (nextChar === charCodes.greaterThan) {
         finishOp(TokenType.pipeline, 2);
         return;
-      } else if (nextChar === charCodes.rightCurlyBrace && isFlowEnabled$1) {
+      } else if (nextChar === charCodes.rightCurlyBrace && false) {
         // '|}'
         finishOp(TokenType.braceBarR, 2);
         return;
@@ -2993,7 +3279,6 @@ const transform=(()=>{
   function readToken_plus_min(code) {
     // '+-'
     const nextChar = input.charCodeAt(state.pos + 1);
-
     if (nextChar === code) {
       // Tentatively call this a prefix operator, but it might be changed to postfix later.
       finishOp(TokenType.preIncDec, 2);
@@ -3009,35 +3294,88 @@ const transform=(()=>{
     }
   }
 
-// '<>'
-  function readToken_lt_gt(code) {
+  function readToken_lt() {
     const nextChar = input.charCodeAt(state.pos + 1);
-
-    if (nextChar === code) {
-      const size =
-        code === charCodes.greaterThan && input.charCodeAt(state.pos + 2) === charCodes.greaterThan
-          ? 3
-          : 2;
-      if (input.charCodeAt(state.pos + size) === charCodes.equalsTo) {
-        finishOp(TokenType.assign, size + 1);
+    if (nextChar === charCodes.lessThan) {
+      if (input.charCodeAt(state.pos + 2) === charCodes.equalsTo) {
+        finishOp(TokenType.assign, 3);
         return;
       }
-      // Avoid right-shift for things like Array<Array<string>>.
-      if (code === charCodes.greaterThan && state.isType) {
-        finishOp(TokenType.greaterThan, 1);
-        return;
+      // We see <<, but need to be really careful about whether to treat it as a
+      // true left-shift or as two < tokens.
+      if (state.isType) {
+        // Within a type, << might come up in a snippet like `Array<<T>() => void>`,
+        // so treat it as two < tokens. Importantly, this should only override <<
+        // rather than other tokens like <= . If we treated <= as < in a type
+        // context, then the snippet `a as T <= 1` would incorrectly start parsing
+        // a type argument on T. We don't need to worry about `a as T << 1`
+        // because TypeScript disallows that syntax.
+        finishOp(TokenType.lessThan, 1);
+      } else {
+        // Outside a type, this might be a true left-shift operator, or it might
+        // still be two open-type-arg tokens, such as in `f<<T>() => void>()`. We
+        // look at the token while considering the `f`, so we don't yet know that
+        // we're in a type context. In this case, we initially tokenize as a
+        // left-shift and correct after-the-fact as necessary in
+        // tsParseTypeArgumentsWithPossibleBitshift .
+        finishOp(TokenType.bitShiftL, 2);
       }
-      finishOp(TokenType.bitShift, size);
       return;
     }
 
     if (nextChar === charCodes.equalsTo) {
-      // <= | >=
+      // <=
       finishOp(TokenType.relationalOrEqual, 2);
-    } else if (code === charCodes.lessThan) {
+    } else {
       finishOp(TokenType.lessThan, 1);
+    }
+  }
+
+  function readToken_gt() {
+    if (state.isType) {
+      // Avoid right-shift for things like `Array<Array<string>>` and
+      // greater-than-or-equal for things like `const a: Array<number>=[];`.
+      finishOp(TokenType.greaterThan, 1);
+      return;
+    }
+
+    const nextChar = input.charCodeAt(state.pos + 1);
+    if (nextChar === charCodes.greaterThan) {
+      const size = input.charCodeAt(state.pos + 2) === charCodes.greaterThan ? 3 : 2;
+      if (input.charCodeAt(state.pos + size) === charCodes.equalsTo) {
+        finishOp(TokenType.assign, size + 1);
+        return;
+      }
+      finishOp(TokenType.bitShiftR, size);
+      return;
+    }
+
+    if (nextChar === charCodes.equalsTo) {
+      // >=
+      finishOp(TokenType.relationalOrEqual, 2);
     } else {
       finishOp(TokenType.greaterThan, 1);
+    }
+  }
+
+  /**
+   * Reinterpret a possible > token when transitioning from a type to a non-type
+   * context.
+   *
+   * This comes up in two situations where >= needs to be treated as one token:
+   * - After an `as` expression, like in the code `a as T >= 1`.
+   * - In a type argument in an expression context, e.g. `f(a < b, c >= d)`, we
+   *   need to see the token as >= so that we get an error and backtrack to
+   *   normal expression parsing.
+   *
+   * Other situations require >= to be seen as two tokens, e.g.
+   * `const x: Array<T>=[];`, so it's important to treat > as its own token in
+   * typical type parsing situations.
+   */
+  function rescan_gt() {
+    if (state.type === TokenType.greaterThan) {
+      state.pos -= 1;
+      readToken_gt();
     }
   }
 
@@ -3048,12 +3386,14 @@ const transform=(()=>{
       finishOp(TokenType.equality, input.charCodeAt(state.pos + 2) === charCodes.equalsTo ? 3 : 2);
       return;
     }
+
     if (code === charCodes.equalsTo && nextChar === charCodes.greaterThan) {
       // '=>'
       state.pos += 2;
       finishToken(TokenType.arrow);
       return;
     }
+
     finishOp(code === charCodes.equalsTo ? TokenType.eq : TokenType.bang, 1);
   }
 
@@ -3061,7 +3401,9 @@ const transform=(()=>{
     // '?'
     const nextChar = input.charCodeAt(state.pos + 1);
     const nextChar2 = input.charCodeAt(state.pos + 2);
-    if (nextChar === charCodes.questionMark && !state.isType) {
+    if (nextChar === charCodes.questionMark && // In Flow (but not TypeScript), ??string is a valid type that should be
+    // tokenized as two individual ? tokens.
+    !(false && state.isType)) {
       if (nextChar2 === charCodes.equalsTo) {
         // '??='
         finishOp(TokenType.assign, 3);
@@ -3069,10 +3411,7 @@ const transform=(()=>{
         // '??'
         finishOp(TokenType.nullishCoalescing, 2);
       }
-    } else if (
-      nextChar === charCodes.dot &&
-      !(nextChar2 >= charCodes.digit0 && nextChar2 <= charCodes.digit9)
-    ) {
+    } else if (nextChar === charCodes.dot && !(nextChar2 >= charCodes.digit0 && nextChar2 <= charCodes.digit9)) {
       // '.' not followed by a number
       state.pos += 2;
       finishToken(TokenType.questionDot);
@@ -3088,14 +3427,11 @@ const transform=(()=>{
         ++state.pos;
         finishToken(TokenType.hash);
         return;
-
       // The interpretation of a dot depends on whether it is followed
       // by a digit or another two dots.
-
       case charCodes.dot:
         readToken_dot();
         return;
-
       // Punctuation tokens.
       case charCodes.leftParenthesis:
         ++state.pos;
@@ -3121,19 +3457,18 @@ const transform=(()=>{
         ++state.pos;
         finishToken(TokenType.bracketR);
         return;
-
       case charCodes.leftCurlyBrace:
-      {
-        ++state.pos;
-        finishToken(TokenType.braceL);
-      }
+        if (false && input.charCodeAt(state.pos + 1) === charCodes.verticalBar) {
+          finishOp(TokenType.braceBarL, 2);
+        } else {
+          ++state.pos;
+          finishToken(TokenType.braceL);
+        }
         return;
-
       case charCodes.rightCurlyBrace:
         ++state.pos;
         finishToken(TokenType.braceR);
         return;
-
       case charCodes.colon:
         if (input.charCodeAt(state.pos + 1) === charCodes.colon) {
           finishOp(TokenType.doubleColon, 2);
@@ -3142,7 +3477,6 @@ const transform=(()=>{
           finishToken(TokenType.colon);
         }
         return;
-
       case charCodes.questionMark:
         readToken_question();
         return;
@@ -3150,23 +3484,14 @@ const transform=(()=>{
         ++state.pos;
         finishToken(TokenType.at);
         return;
-
       case charCodes.graveAccent:
         ++state.pos;
         finishToken(TokenType.backQuote);
         return;
-
       case charCodes.digit0: {
         const nextChar = input.charCodeAt(state.pos + 1);
         // '0x', '0X', '0o', '0O', '0b', '0B'
-        if (
-          nextChar === charCodes.lowercaseX ||
-          nextChar === charCodes.uppercaseX ||
-          nextChar === charCodes.lowercaseO ||
-          nextChar === charCodes.uppercaseO ||
-          nextChar === charCodes.lowercaseB ||
-          nextChar === charCodes.uppercaseB
-        ) {
+        if (nextChar === charCodes.lowercaseX || nextChar === charCodes.uppercaseX || nextChar === charCodes.lowercaseO || nextChar === charCodes.uppercaseO || nextChar === charCodes.lowercaseB || nextChar === charCodes.uppercaseB) {
           readRadixNumber();
           return;
         }
@@ -3184,54 +3509,48 @@ const transform=(()=>{
       case charCodes.digit9:
         readNumber(false);
         return;
-
       // Quotes produce strings.
       case charCodes.quotationMark:
       case charCodes.apostrophe:
         readString(code);
         return;
-
       // Operators are parsed inline in tiny state machines. '=' (charCodes.equalsTo) is
       // often referred to. `finishOp` simply skips the amount of
       // characters it is given as second argument, and returns a token
       // of the type given by its first argument.
-
       case charCodes.slash:
         readToken_slash();
         return;
-
       case charCodes.percentSign:
       case charCodes.asterisk:
         readToken_mult_modulo(code);
         return;
-
       case charCodes.verticalBar:
       case charCodes.ampersand:
         readToken_pipe_amp(code);
         return;
-
       case charCodes.caret:
         readToken_caret();
         return;
-
       case charCodes.plusSign:
       case charCodes.dash:
         readToken_plus_min(code);
         return;
-
       case charCodes.lessThan:
-      case charCodes.greaterThan:
-        readToken_lt_gt(code);
+        readToken_lt();
         return;
-
+      case charCodes.greaterThan:
+        readToken_gt();
+        return;
       case charCodes.equalsTo:
       case charCodes.exclamationMark:
         readToken_eq_excl(code);
         return;
-
       case charCodes.tilde:
         finishOp(TokenType.tilde, 1);
         return;
+      default:
+        break;
     }
 
     unexpected(`Unexpected character '${String.fromCharCode(code)}'`, state.pos);
@@ -3246,7 +3565,7 @@ const transform=(()=>{
     const start = state.pos;
     let escaped = false;
     let inClass = false;
-    for (;;) {
+    for (; ; ) {
       if (state.pos >= input.length) {
         unexpected("Unterminated regular expression", start);
         return;
@@ -3266,24 +3585,22 @@ const transform=(()=>{
       }
       ++state.pos;
     }
+
     ++state.pos;
     // Need to use `skipWord` because '\uXXXX' sequences are allowed here (don't ask).
     skipWord();
-
     finishToken(TokenType.regexp);
   }
 
-// Read an integer. We allow any valid digit, including hex digits, plus numeric separators, and
-// stop at any other character.
+  /**
+   * Read a decimal integer. Note that this can't be unified with the similar code
+   * in readRadixNumber (which also handles hex digits) because "e" needs to be
+   * the end of the integer so that we can properly handle scientific notation.
+   */
   function readInt() {
     while (true) {
       const code = input.charCodeAt(state.pos);
-      if (
-        (code >= charCodes.digit0 && code <= charCodes.digit9) ||
-        (code >= charCodes.lowercaseA && code <= charCodes.lowercaseF) ||
-        (code >= charCodes.uppercaseA && code <= charCodes.uppercaseF) ||
-        code === charCodes.underscore
-      ) {
+      if (code >= charCodes.digit0 && code <= charCodes.digit9 || code === charCodes.underscore) {
         state.pos++;
       } else {
         break;
@@ -3292,33 +3609,31 @@ const transform=(()=>{
   }
 
   function readRadixNumber() {
-    let isBigInt = false;
-    const start = state.pos;
-
-    state.pos += 2; // 0x
-    readInt();
+    state.pos += 2;
+    // 0x
+    // Walk to the end of the number, allowing hex digits.
+    while (true) {
+      const code = input.charCodeAt(state.pos);
+      if (code >= charCodes.digit0 && code <= charCodes.digit9 || code >= charCodes.lowercaseA && code <= charCodes.lowercaseF || code >= charCodes.uppercaseA && code <= charCodes.uppercaseF || code === charCodes.underscore) {
+        state.pos++;
+      } else {
+        break;
+      }
+    }
 
     const nextChar = input.charCodeAt(state.pos);
     if (nextChar === charCodes.lowercaseN) {
       ++state.pos;
-      isBigInt = true;
-    } else if (nextChar === charCodes.lowercaseM) {
-      unexpected("Invalid decimal", start);
-    }
-
-    if (isBigInt) {
       finishToken(TokenType.bigint);
-      return;
+    } else {
+      finishToken(TokenType.num);
     }
-
-    finishToken(TokenType.num);
   }
 
-// Read an integer, octal integer, or floating-point number.
+  // Read an integer, octal integer, or floating-point number.
   function readNumber(startsWithDot) {
     let isBigInt = false;
     let isDecimal = false;
-
     if (!startsWithDot) {
       readInt();
     }
@@ -3362,7 +3677,7 @@ const transform=(()=>{
 
   function readString(quote) {
     state.pos++;
-    for (;;) {
+    for (; ; ) {
       if (state.pos >= input.length) {
         unexpected("Unterminated string constant");
         return;
@@ -3375,22 +3690,20 @@ const transform=(()=>{
       }
       state.pos++;
     }
+
     state.pos++;
     finishToken(TokenType.string);
   }
 
-// Reads template string tokens.
+  // Reads template string tokens.
   function readTmplToken() {
-    for (;;) {
+    for (; ; ) {
       if (state.pos >= input.length) {
         unexpected("Unterminated template");
         return;
       }
       const ch = input.charCodeAt(state.pos);
-      if (
-        ch === charCodes.graveAccent ||
-        (ch === charCodes.dollarSign && input.charCodeAt(state.pos + 1) === charCodes.leftCurlyBrace)
-      ) {
+      if (ch === charCodes.graveAccent || ch === charCodes.dollarSign && input.charCodeAt(state.pos + 1) === charCodes.leftCurlyBrace) {
         if (state.pos === state.start && match(TokenType.template)) {
           if (ch === charCodes.dollarSign) {
             state.pos += 2;
@@ -3412,9 +3725,9 @@ const transform=(()=>{
     }
   }
 
-// Skip to the end of the current word. Note that this is the same as the snippet at the end of
-// readWord, but calling skipWord from readWord seems to slightly hurt performance from some rough
-// measurements.
+  // Skip to the end of the current word. Note that this is the same as the snippet at the end of
+  // readWord, but calling skipWord from readWord seems to slightly hurt performance from some rough
+  // measurements.
   function skipWord() {
     while (state.pos < input.length) {
       const ch = input.charCodeAt(state.pos);
@@ -3424,10 +3737,7 @@ const transform=(()=>{
         // \u
         state.pos += 2;
         if (input.charCodeAt(state.pos) === charCodes.leftCurlyBrace) {
-          while (
-            state.pos < input.length &&
-            input.charCodeAt(state.pos) !== charCodes.rightCurlyBrace
-            ) {
+          while (state.pos < input.length && input.charCodeAt(state.pos) !== charCodes.rightCurlyBrace) {
             state.pos++;
           }
           state.pos++;
@@ -3438,18 +3748,15 @@ const transform=(()=>{
     }
   }
 
-  /**
+    /**
    * Traverse the given tokens and modify them if necessary to indicate that some names shadow global
    * variables.
    */
-  function identifyShadowedGlobals(
-    tokens,
-    scopes,
-    globalNames,
-  ) {
+  function identifyShadowedGlobals(tokens, scopes, globalNames) {
     if (!hasShadowedGlobals(tokens, globalNames)) {
       return;
     }
+
     markShadowedGlobals(tokens, scopes, globalNames);
   }
 
@@ -3457,25 +3764,18 @@ const transform=(()=>{
    * We can do a fast up-front check to see if there are any declarations to global names. If not,
    * then there's no point in computing scope assignments.
    */
-// Exported for testing.
+  // Exported for testing.
   function hasShadowedGlobals(tokens, globalNames) {
     for (const token of tokens.tokens) {
-      if (
-        token.type === TokenType.name &&
-        isNonTopLevelDeclaration(token) &&
-        globalNames.has(tokens.identifierNameForToken(token))
-      ) {
+      if (token.type === TokenType.name && !token.isType && isNonTopLevelDeclaration(token) && globalNames.has(tokens.identifierNameForToken(token))) {
         return true;
       }
     }
+
     return false;
   }
 
-  function markShadowedGlobals(
-    tokens,
-    scopes,
-    globalNames,
-  ) {
+  function markShadowedGlobals(tokens, scopes, globalNames) {
     const scopeStack = [];
     let scopeIndex = scopes.length - 1;
     // Scopes were generated at completion time, so they're sorted by end index, so we can maintain a
@@ -3492,10 +3792,9 @@ const transform=(()=>{
       if (i < 0) {
         break;
       }
-
       const token = tokens.tokens[i];
       const name = tokens.identifierNameForToken(token);
-      if (scopeStack.length > 1 && token.type === TokenType.name && globalNames.has(name)) {
+      if (scopeStack.length > 1 && !token.isType && token.type === TokenType.name && globalNames.has(name)) {
         if (isBlockScopedDeclaration(token)) {
           markShadowedForScope(scopeStack[scopeStack.length - 1], tokens, name);
         } else if (isFunctionScopedDeclaration(token)) {
@@ -3510,6 +3809,7 @@ const transform=(()=>{
         }
       }
     }
+
     if (scopeStack.length > 0) {
       throw new Error("Expected empty scope stack after processing file.");
     }
@@ -3518,16 +3818,13 @@ const transform=(()=>{
   function markShadowedForScope(scope, tokens, name) {
     for (let i = scope.startTokenIndex; i < scope.endTokenIndex; i++) {
       const token = tokens.tokens[i];
-      if (
-        (token.type === TokenType.name || token.type === TokenType.jsxName) &&
-        tokens.identifierNameForToken(token) === name
-      ) {
+      if ((token.type === TokenType.name || token.type === TokenType.jsxName) && tokens.identifierNameForToken(token) === name) {
         token.shadowsGlobal = true;
       }
     }
   }
 
-  /**
+    /**
    * Get all identifier names in the code, in order, including duplicates.
    */
   function getIdentifierNames(code, tokens) {
@@ -3537,13 +3834,18 @@ const transform=(()=>{
         names.push(code.slice(token.start, token.end));
       }
     }
+
     return names;
   }
 
-  class NameManager {
-    __init() {this.usedNames = new Set();}
+    class NameManager {
+    __init() {
+      this.usedNames = /* @__PURE__ */ new Set();
+    }
 
-    constructor(code, tokens) {NameManager.prototype.__init.call(this);
+    constructor(code, tokens) {
+      ;
+      NameManager.prototype.__init.call(this);
       this.usedNames = new Set(getIdentifierNames(code, tokens));
     }
 
@@ -3563,9 +3865,9 @@ const transform=(()=>{
       }
       return name + String(suffixNum);
     }
-  }
+  };
 
-  function parseSpread() {
+    function parseSpread() {
     next();
     parseMaybeAssign(false);
   }
@@ -3594,10 +3896,11 @@ const transform=(()=>{
     } else {
       identifierRole = IdentifierRole.FunctionScopedDeclaration;
     }
+
     state.tokens[state.tokens.length - 1].identifierRole = identifierRole;
   }
 
-// Parses lvalue (assignable) atom.
+  // Parses lvalue (assignable) atom.
   function parseBindingAtom(isBlockScope) {
     switch (state.type) {
       case TokenType._this: {
@@ -3607,41 +3910,34 @@ const transform=(()=>{
         popTypeContext(oldIsType);
         return;
       }
-
       case TokenType._yield:
       case TokenType.name: {
         state.type = TokenType.name;
         parseBindingIdentifier(isBlockScope);
         return;
       }
-
       case TokenType.bracketL: {
         next();
-        parseBindingList(TokenType.bracketR, isBlockScope, true /* allowEmpty */);
+        parseBindingList(
+          TokenType.bracketR,
+          isBlockScope,
+          true
+          /* allowEmpty */
+        );
         return;
       }
-
       case TokenType.braceL:
         parseObj(true, isBlockScope);
         return;
-
       default:
         unexpected();
     }
   }
 
-  function parseBindingList(
-    close,
-    isBlockScope,
-    allowEmpty = false,
-    allowModifiers = false,
-    contextId = 0,
-  ) {
+  function parseBindingList(close, isBlockScope, allowEmpty = false, allowModifiers = false, contextId = 0) {
     let first = true;
-
     let hasRemovedComma = false;
     const firstItemTokenIndex = state.tokens.length;
-
     while (!eat(close) && !state.error) {
       if (first) {
         first = false;
@@ -3655,7 +3951,9 @@ const transform=(()=>{
           hasRemovedComma = true;
         }
       }
-      if (allowEmpty && match(TokenType.comma)) ; else if (eat(close)) {
+      if (allowEmpty && match(TokenType.comma)) {
+        // Empty item; nothing further to parse for this item.
+      } else if (eat(close)) {
         break;
       } else if (match(TokenType.ellipsis)) {
         parseRest(isBlockScope);
@@ -3677,49 +3975,46 @@ const transform=(()=>{
         ContextualKeyword._protected,
         ContextualKeyword._private,
         ContextualKeyword._readonly,
-        ContextualKeyword._override,
+        ContextualKeyword._override
       ]);
     }
 
     parseMaybeDefault(isBlockScope);
     parseAssignableListItemTypes();
-    parseMaybeDefault(isBlockScope, true /* leftAlreadyParsed */);
+    parseMaybeDefault(
+      isBlockScope,
+      true
+      /* leftAlreadyParsed */
+    );
   }
 
   function parseAssignableListItemTypes() {
-    {
-      tsParseAssignableListItemTypes();
-    }
+    tsParseAssignableListItemTypes();
   }
 
-// Parses assignment pattern around given atom if possible.
+  // Parses assignment pattern around given atom if possible.
   function parseMaybeDefault(isBlockScope, leftAlreadyParsed = false) {
     if (!leftAlreadyParsed) {
       parseBindingAtom(isBlockScope);
     }
+
     if (!eat(TokenType.eq)) {
       return;
     }
+
     const eqIndex = state.tokens.length - 1;
     parseMaybeAssign();
     state.tokens[eqIndex].rhsEndIndex = state.tokens.length;
   }
 
-  function tsIsIdentifier() {
+    function tsIsIdentifier() {
     // TODO: actually a bit more complex in TypeScript, but shouldn't matter.
     // See https://github.com/Microsoft/TypeScript/issues/15008
     return match(TokenType.name);
   }
 
   function isLiteralPropertyName() {
-    return (
-      match(TokenType.name) ||
-      Boolean(state.type & TokenType.IS_KEYWORD) ||
-      match(TokenType.string) ||
-      match(TokenType.num) ||
-      match(TokenType.bigint) ||
-      match(TokenType.decimal)
-    );
+    return match(TokenType.name) || Boolean(state.type & TokenType.IS_KEYWORD) || match(TokenType.string) || match(TokenType.num) || match(TokenType.bigint) || match(TokenType.decimal);
   }
 
   function tsNextTokenCanFollowModifier() {
@@ -3728,17 +4023,8 @@ const transform=(()=>{
     // This implementation only handles modifiers not handled by babylon itself. And "static".
     // TODO: Would be nice to avoid lookahead. Want a hasLineBreakUpNext() method...
     const snapshot = state.snapshot();
-
     next();
-    const canFollowModifier =
-      (match(TokenType.bracketL) ||
-        match(TokenType.braceL) ||
-        match(TokenType.star) ||
-        match(TokenType.ellipsis) ||
-        match(TokenType.hash) ||
-        isLiteralPropertyName()) &&
-      !hasPrecedingLineBreak();
-
+    const canFollowModifier = (match(TokenType.bracketL) || match(TokenType.braceL) || match(TokenType.star) || match(TokenType.ellipsis) || match(TokenType.hash) || isLiteralPropertyName()) && !hasPrecedingLineBreak();
     if (canFollowModifier) {
       return true;
     } else {
@@ -3757,9 +4043,7 @@ const transform=(()=>{
   }
 
   /** Parses a modifier matching one the given modifier names. */
-  function tsParseModifier(
-    allowedModifiers,
-  ) {
+  function tsParseModifier(allowedModifiers) {
     if (!match(TokenType.name)) {
       return null;
     }
@@ -3791,9 +4075,12 @@ const transform=(()=>{
         case ContextualKeyword._declare:
           state.tokens[state.tokens.length - 1].type = TokenType._declare;
           break;
+        default:
+          break;
       }
       return modifier;
     }
+
     return null;
   }
 
@@ -3827,6 +4114,10 @@ const transform=(()=>{
     } else {
       tsParseEntityName();
     }
+
+    if (!hasPrecedingLineBreak() && match(TokenType.lessThan)) {
+      tsParseTypeArguments();
+    }
   }
 
   function tsParseImportType() {
@@ -3837,16 +4128,29 @@ const transform=(()=>{
     if (eat(TokenType.dot)) {
       tsParseEntityName();
     }
+
     if (match(TokenType.lessThan)) {
       tsParseTypeArguments();
     }
   }
 
   function tsParseTypeParameter() {
-    parseIdentifier();
+    eat(TokenType._const);
+    const hadIn = eat(TokenType._in);
+    const hadOut = eatContextual(ContextualKeyword._out);
+    eat(TokenType._const);
+    if ((hadIn || hadOut) && !match(TokenType.name)) {
+      // The "in" or "out" keyword must have actually been the type parameter
+      // name, so set it as the name.
+      state.tokens[state.tokens.length - 1].type = TokenType.name;
+    } else {
+      parseIdentifier();
+    }
+
     if (eat(TokenType._extends)) {
       tsParseType();
     }
+
     if (eat(TokenType.eq)) {
       tsParseType();
     }
@@ -3870,11 +4174,12 @@ const transform=(()=>{
       tsParseTypeParameter();
       eat(TokenType.comma);
     }
+
     popTypeContext(oldIsType);
   }
 
-// Note: In TypeScript implementation we must provide `yieldContext` and `awaitContext`,
-// but here it's always false, because this is only used for types.
+  // Note: In TypeScript implementation we must provide `yieldContext` and `awaitContext`,
+  // but here it's always false, because this is only used for types.
   function tsFillSignature(returnToken) {
     // Arrow fns *must* have return token (`=>`). Normal functions can omit it.
     const returnTokenRequired = returnToken === TokenType.arrow;
@@ -3883,7 +4188,10 @@ const transform=(()=>{
     // Create a scope even though we're doing type parsing so we don't accidentally
     // treat params as top-level bindings.
     state.scopeDepth++;
-    tsParseBindingListForSignature(false /* isBlockScope */);
+    tsParseBindingListForSignature(
+      false
+      /* isBlockScope */
+    );
     state.scopeDepth--;
     if (returnTokenRequired) {
       tsParseTypeOrTypePredicateAnnotation(returnToken);
@@ -3909,7 +4217,8 @@ const transform=(()=>{
 
   function tsIsUnambiguouslyIndexSignature() {
     const snapshot = state.snapshot();
-    next(); // Skip '{'
+    next();
+    // Skip '{'
     const isIndexSignature = eat(TokenType.name) && match(TokenType.colon);
     state.restoreFromSnapshot(snapshot);
     return isIndexSignature;
@@ -3921,22 +4230,18 @@ const transform=(()=>{
     }
 
     const oldIsType = pushTypeContext(0);
-
     expect(TokenType.bracketL);
     parseIdentifier();
     tsParseTypeAnnotation();
     expect(TokenType.bracketR);
-
     tsTryParseTypeAnnotation();
     tsParseTypeMemberSemicolon();
-
     popTypeContext(oldIsType);
     return true;
   }
 
   function tsParsePropertyOrMethodSignature(isReadonly) {
     eat(TokenType.question);
-
     if (!isReadonly && (match(TokenType.parenL) || match(TokenType.lessThan))) {
       tsFillSignature(TokenType.colon);
       tsParseTypeMemberSemicolon();
@@ -3952,6 +4257,7 @@ const transform=(()=>{
       tsParseSignatureMember();
       return;
     }
+
     if (match(TokenType._new)) {
       next();
       if (match(TokenType.parenL) || match(TokenType.lessThan)) {
@@ -3962,17 +4268,22 @@ const transform=(()=>{
       }
       return;
     }
-    const readonly = !!tsParseModifier([ContextualKeyword._readonly]);
 
+    const readonly = !!tsParseModifier([ContextualKeyword._readonly]);
     const found = tsTryParseIndexSignature();
     if (found) {
       return;
     }
-    if (
-      (isContextual(ContextualKeyword._get) || isContextual(ContextualKeyword._set)) &&
-      tsNextTokenCanFollowModifier()
-    ) ;
-    parsePropertyName(-1 /* Types don't need context IDs. */);
+
+    if ((isContextual(ContextualKeyword._get) || isContextual(ContextualKeyword._set)) && tsNextTokenCanFollowModifier()) {
+      // This is a getter/setter on a type. The tsNextTokenCanFollowModifier
+      // function already called next() for us, so continue parsing the name.
+    }
+
+    parsePropertyName(
+      -1
+      /* Types don't need context IDs. */
+    );
     tsParsePropertyOrMethodSignature(readonly);
   }
 
@@ -3999,16 +4310,20 @@ const transform=(()=>{
     if (eat(TokenType.plus) || eat(TokenType.minus)) {
       return isContextual(ContextualKeyword._readonly);
     }
+
     if (isContextual(ContextualKeyword._readonly)) {
       next();
     }
+
     if (!match(TokenType.bracketL)) {
       return false;
     }
+
     next();
     if (!tsIsIdentifier()) {
       return false;
     }
+
     next();
     return match(TokenType._in);
   }
@@ -4027,11 +4342,13 @@ const transform=(()=>{
     } else {
       eatContextual(ContextualKeyword._readonly);
     }
+
     expect(TokenType.bracketL);
     tsParseMappedTypeParameter();
     if (eatContextual(ContextualKeyword._as)) {
       tsParseType();
     }
+
     expect(TokenType.bracketR);
     if (match(TokenType.plus) || match(TokenType.minus)) {
       next();
@@ -4039,6 +4356,7 @@ const transform=(()=>{
     } else {
       eat(TokenType.question);
     }
+
     tsTryParseType();
     semicolon();
     expect(TokenType.braceR);
@@ -4089,23 +4407,32 @@ const transform=(()=>{
       // Finish quasi, read either ${ or `
       nextTemplateToken();
     }
+
     next();
   }
 
-  var FunctionType; (function (FunctionType) {
-    const TSFunctionType = 0; FunctionType[FunctionType["TSFunctionType"] = TSFunctionType] = "TSFunctionType";
-    const TSConstructorType = TSFunctionType + 1; FunctionType[FunctionType["TSConstructorType"] = TSConstructorType] = "TSConstructorType";
-    const TSAbstractConstructorType = TSConstructorType + 1; FunctionType[FunctionType["TSAbstractConstructorType"] = TSAbstractConstructorType] = "TSAbstractConstructorType";
+  var FunctionType;
+  (function(FunctionType2) {
+    const TSFunctionType = 0;
+    FunctionType2[FunctionType2["TSFunctionType"] = TSFunctionType] = "TSFunctionType";
+    const TSConstructorType = TSFunctionType + 1;
+    FunctionType2[FunctionType2["TSConstructorType"] = TSConstructorType] = "TSConstructorType";
+    const TSAbstractConstructorType = TSConstructorType + 1;
+    FunctionType2[FunctionType2["TSAbstractConstructorType"] = TSAbstractConstructorType] = "TSAbstractConstructorType";
   })(FunctionType || (FunctionType = {}));
-
   function tsParseFunctionOrConstructorType(type) {
     if (type === FunctionType.TSAbstractConstructorType) {
       expectContextual(ContextualKeyword._abstract);
     }
+
     if (type === FunctionType.TSConstructorType || type === FunctionType.TSAbstractConstructorType) {
       expect(TokenType._new);
     }
+
+    const oldInDisallowConditionalTypesContext = state.inDisallowConditionalTypesContext;
+    state.inDisallowConditionalTypesContext = false;
     tsFillSignature(TokenType.arrow);
+    state.inDisallowConditionalTypesContext = oldInDisallowConditionalTypesContext;
   }
 
   function tsParseNonArrayType() {
@@ -4184,20 +4511,32 @@ const transform=(()=>{
   function tsParseInferType() {
     expectContextual(ContextualKeyword._infer);
     parseIdentifier();
+    if (match(TokenType._extends)) {
+      // Infer type constraints introduce an ambiguity about whether the "extends"
+      // is a constraint for this infer type or is another conditional type.
+      const snapshot = state.snapshot();
+      expect(TokenType._extends);
+      const oldInDisallowConditionalTypesContext = state.inDisallowConditionalTypesContext;
+      state.inDisallowConditionalTypesContext = true;
+      tsParseType();
+      state.inDisallowConditionalTypesContext = oldInDisallowConditionalTypesContext;
+      if (state.error || !state.inDisallowConditionalTypesContext && match(TokenType.question)) {
+        state.restoreFromSnapshot(snapshot);
+      }
+    }
   }
 
   function tsParseTypeOperatorOrHigher() {
-    if (
-      isContextual(ContextualKeyword._keyof) ||
-      isContextual(ContextualKeyword._unique) ||
-      isContextual(ContextualKeyword._readonly)
-    ) {
+    if (isContextual(ContextualKeyword._keyof) || isContextual(ContextualKeyword._unique) || isContextual(ContextualKeyword._readonly)) {
       next();
       tsParseTypeOperatorOrHigher();
     } else if (isContextual(ContextualKeyword._infer)) {
       tsParseInferType();
     } else {
+      const oldInDisallowConditionalTypesContext = state.inDisallowConditionalTypesContext;
+      state.inDisallowConditionalTypesContext = false;
       tsParseArrayTypeOrHigher();
+      state.inDisallowConditionalTypesContext = oldInDisallowConditionalTypesContext;
     }
   }
 
@@ -4225,6 +4564,7 @@ const transform=(()=>{
     if (match(TokenType.lessThan)) {
       return true;
     }
+
     return match(TokenType.parenL) && tsLookaheadIsUnambiguouslyStartOfFunctionType();
   }
 
@@ -4233,6 +4573,7 @@ const transform=(()=>{
       next();
       return true;
     }
+
     // If this is a possible array/object destructure, walk to the matching bracket/brace.
     // The next token after will tell us definitively whether this is a function param.
     if (match(TokenType.braceL) || match(TokenType.bracketL)) {
@@ -4248,6 +4589,7 @@ const transform=(()=>{
       }
       return true;
     }
+
     return false;
   }
 
@@ -4265,6 +4607,7 @@ const transform=(()=>{
       // ( ...
       return true;
     }
+
     if (tsSkipParameterStart()) {
       if (match(TokenType.colon) || match(TokenType.comma) || match(TokenType.question) || match(TokenType.eq)) {
         // ( xxx :
@@ -4281,6 +4624,7 @@ const transform=(()=>{
         }
       }
     }
+
     return false;
   }
 
@@ -4291,6 +4635,7 @@ const transform=(()=>{
     if (!finishedReturn) {
       tsParseType();
     }
+
     popTypeContext(oldIsType);
   }
 
@@ -4320,7 +4665,7 @@ const transform=(()=>{
    */
   function tsParseTypePredicateOrAssertsPrefix() {
     const snapshot = state.snapshot();
-    if (isContextual(ContextualKeyword._asserts) && !hasPrecedingLineBreak()) {
+    if (isContextual(ContextualKeyword._asserts)) {
       // Normally this is `asserts x is T`, but at this point, it might be `asserts is T` (a user-
       // defined type guard on the `asserts` variable) or just a type called `asserts`.
       next();
@@ -4354,6 +4699,7 @@ const transform=(()=>{
         return false;
       }
     }
+
     return false;
   }
 
@@ -4366,11 +4712,15 @@ const transform=(()=>{
 
   function tsParseType() {
     tsParseNonConditionalType();
-    if (hasPrecedingLineBreak() || !eat(TokenType._extends)) {
+    if (state.inDisallowConditionalTypesContext || hasPrecedingLineBreak() || !eat(TokenType._extends)) {
       return;
     }
+
     // extends type
+    const oldInDisallowConditionalTypesContext = state.inDisallowConditionalTypesContext;
+    state.inDisallowConditionalTypesContext = true;
     tsParseNonConditionalType();
+    state.inDisallowConditionalTypesContext = oldInDisallowConditionalTypesContext;
     expect(TokenType.question);
     // true type
     tsParseType();
@@ -4388,6 +4738,7 @@ const transform=(()=>{
       tsParseFunctionOrConstructorType(FunctionType.TSFunctionType);
       return;
     }
+
     if (match(TokenType._new)) {
       // As in `new () => Date`
       tsParseFunctionOrConstructorType(FunctionType.TSConstructorType);
@@ -4397,6 +4748,7 @@ const transform=(()=>{
       tsParseFunctionOrConstructorType(FunctionType.TSAbstractConstructorType);
       return;
     }
+
     tsParseUnionTypeOrHigher();
   }
 
@@ -4406,6 +4758,20 @@ const transform=(()=>{
     expect(TokenType.greaterThan);
     popTypeContext(oldIsType);
     parseMaybeUnary();
+  }
+
+  function tsTryParseJSXTypeArgument() {
+    if (eat(TokenType.jsxTagStart)) {
+      state.tokens[state.tokens.length - 1].type = TokenType.typeParameterStart;
+      const oldIsType = pushTypeContext(1);
+      while (!match(TokenType.greaterThan) && !state.error) {
+        tsParseType();
+        eat(TokenType.comma);
+      }
+      // Process >, but the one after needs to be parsed JSX-style.
+      nextJSXTagToken();
+      popTypeContext(oldIsType);
+    }
   }
 
   function tsParseHeritageClause() {
@@ -4430,6 +4796,7 @@ const transform=(()=>{
     if (eat(TokenType._extends)) {
       tsParseHeritageClause();
     }
+
     tsParseObjectTypeMembers();
   }
 
@@ -4448,6 +4815,7 @@ const transform=(()=>{
     } else {
       parseIdentifier();
     }
+
     if (eat(TokenType.eq)) {
       const eqIndex = state.tokens.length - 1;
       parseMaybeAssign();
@@ -4466,7 +4834,10 @@ const transform=(()=>{
 
   function tsParseModuleBlock() {
     expect(TokenType.braceL);
-    parseBlockBody(/* end */ TokenType.braceR);
+    parseBlockBody(
+      /* end */
+      TokenType.braceR
+    );
   }
 
   function tsParseModuleOrNamespaceDeclaration() {
@@ -4519,17 +4890,18 @@ const transform=(()=>{
     if (!match(TokenType.string)) {
       unexpected();
     }
+
     parseLiteral();
     expect(TokenType.parenR);
   }
 
-// Utilities
-
-// Returns true if a statement matched.
+  // Utilities
+  // Returns true if a statement matched.
   function tsTryParseDeclare() {
     if (isLineTerminator()) {
       return false;
     }
+
     switch (state.type) {
       case TokenType._function: {
         const oldIsType = pushTypeContext(1);
@@ -4537,13 +4909,22 @@ const transform=(()=>{
         // We don't need to precisely get the function start here, since it's only used to mark
         // the function as a type if it's bodiless, and it's already a type here.
         const functionStart = state.start;
-        parseFunction(functionStart, /* isStatement */ true);
+        parseFunction(
+          functionStart,
+          /* isStatement */
+          true
+        );
         popTypeContext(oldIsType);
         return true;
       }
       case TokenType._class: {
         const oldIsType = pushTypeContext(1);
-        parseClass(/* isStatement */ true, /* optionalId */ false);
+        parseClass(
+          /* isStatement */
+          true,
+          /* optionalId */
+          false
+        );
         popTypeContext(oldIsType);
         return true;
       }
@@ -4563,7 +4944,7 @@ const transform=(()=>{
       case TokenType._var:
       case TokenType._let: {
         const oldIsType = pushTypeContext(1);
-        parseVarStatement(state.type);
+        parseVarStatement(state.type !== TokenType._var);
         popTypeContext(oldIsType);
         return true;
       }
@@ -4575,7 +4956,11 @@ const transform=(()=>{
           tsParseAmbientExternalModuleDeclaration();
           matched = true;
         } else {
-          matched = tsParseDeclaration(contextualKeyword, /* isBeforeToken */ true);
+          matched = tsParseDeclaration(
+            contextualKeyword,
+            /* isBeforeToken */
+            true
+          );
         }
         popTypeContext(oldIsType);
         return matched;
@@ -4585,13 +4970,17 @@ const transform=(()=>{
     }
   }
 
-// Note: this won't be called unless the keyword is allowed in `shouldParseExportDeclaration`.
-// Returns true if it matched a declaration.
+  // Note: this won't be called unless the keyword is allowed in `shouldParseExportDeclaration`.
+  // Returns true if it matched a declaration.
   function tsTryParseExportDeclaration() {
-    return tsParseDeclaration(state.contextualKeyword, /* isBeforeToken */ true);
+    return tsParseDeclaration(
+      state.contextualKeyword,
+      /* isBeforeToken */
+      true
+    );
   }
 
-// Returns true if it matched a statement.
+  // Returns true if it matched a statement.
   function tsParseExpressionStatement(contextualKeyword) {
     switch (contextualKeyword) {
       case ContextualKeyword._declare: {
@@ -4604,17 +4993,19 @@ const transform=(()=>{
         break;
       }
       case ContextualKeyword._global:
-        // `global { }` (with no `declare`) may appear inside an ambient module declaration.
-        // Would like to use tsParseAmbientExternalModuleDeclaration here, but already ran past "global".
         if (match(TokenType.braceL)) {
           tsParseModuleBlock();
           return true;
         }
         break;
-
       default:
-        return tsParseDeclaration(contextualKeyword, /* isBeforeToken */ false);
+        return tsParseDeclaration(
+          contextualKeyword,
+          /* isBeforeToken */
+          false
+        );
     }
+
     return false;
   }
 
@@ -4635,11 +5026,15 @@ const transform=(()=>{
       case ContextualKeyword._abstract:
         if (tsCheckLineTerminator(isBeforeToken) && match(TokenType._class)) {
           state.tokens[state.tokens.length - 1].type = TokenType._abstract;
-          parseClass(/* isStatement */ true, /* optionalId */ false);
+          parseClass(
+            /* isStatement */
+            true,
+            /* optionalId */
+            false
+          );
           return true;
         }
         break;
-
       case ContextualKeyword._enum:
         if (tsCheckLineTerminator(isBeforeToken) && match(TokenType.name)) {
           state.tokens[state.tokens.length - 1].type = TokenType._enum;
@@ -4647,7 +5042,6 @@ const transform=(()=>{
           return true;
         }
         break;
-
       case ContextualKeyword._interface:
         if (tsCheckLineTerminator(isBeforeToken) && match(TokenType.name)) {
           // `next` is true in "export" and "declare" contexts, so we want to remove that token
@@ -4658,7 +5052,6 @@ const transform=(()=>{
           return true;
         }
         break;
-
       case ContextualKeyword._module:
         if (tsCheckLineTerminator(isBeforeToken)) {
           if (match(TokenType.string)) {
@@ -4674,7 +5067,6 @@ const transform=(()=>{
           }
         }
         break;
-
       case ContextualKeyword._namespace:
         if (tsCheckLineTerminator(isBeforeToken) && match(TokenType.name)) {
           const oldIsType = pushTypeContext(isBeforeToken ? 2 : 1);
@@ -4683,7 +5075,6 @@ const transform=(()=>{
           return true;
         }
         break;
-
       case ContextualKeyword._type:
         if (tsCheckLineTerminator(isBeforeToken) && match(TokenType.name)) {
           const oldIsType = pushTypeContext(isBeforeToken ? 2 : 1);
@@ -4692,7 +5083,10 @@ const transform=(()=>{
           return true;
         }
         break;
+      default:
+        break;
     }
+
     return false;
   }
 
@@ -4708,15 +5102,13 @@ const transform=(()=>{
     }
   }
 
-// Returns true if there was a generic async arrow function.
+  // Returns true if there was a generic async arrow function.
   function tsTryParseGenericAsyncArrowFunction() {
     const snapshot = state.snapshot();
-
     tsParseTypeParameters();
     parseFunctionParams();
     tsTryParseTypeOrTypePredicateAnnotation();
     expect(TokenType.arrow);
-
     if (state.error) {
       state.restoreFromSnapshot(snapshot);
       return false;
@@ -4726,14 +5118,48 @@ const transform=(()=>{
     return true;
   }
 
+  /**
+   * If necessary, hack the tokenizer state so that this bitshift was actually a
+   * less-than token, then keep parsing. This should only be used in situations
+   * where we restore from snapshot on error (which reverts this change) or
+   * where bitshift would be illegal anyway (e.g. in a class "extends" clause).
+   *
+   * This hack is useful to handle situations like foo<<T>() => void>() where
+   * there can legitimately be two open-angle-brackets in a row in TS.
+   */
+  function tsParseTypeArgumentsWithPossibleBitshift() {
+    if (state.type === TokenType.bitShiftL) {
+      state.pos -= 1;
+      finishToken(TokenType.lessThan);
+    }
+
+    tsParseTypeArguments();
+  }
+
   function tsParseTypeArguments() {
     const oldIsType = pushTypeContext(0);
     expect(TokenType.lessThan);
-    while (!eat(TokenType.greaterThan) && !state.error) {
+    while (!match(TokenType.greaterThan) && !state.error) {
       tsParseType();
       eat(TokenType.comma);
     }
-    popTypeContext(oldIsType);
+
+    if (!oldIsType) {
+      // If the type arguments are present in an expression context, e.g.
+      // f<number>(), then the > sign should be tokenized as a non-type token.
+      // In particular, f(a < b, c >= d) should parse the >= as a single token,
+      // resulting in a syntax error and fallback to the non-type-args
+      // interpretation. In the success case, even though the > is tokenized as a
+      // non-type token, it still must be marked as a type token so that it is
+      // erased.
+      popTypeContext(oldIsType);
+      rescan_gt();
+      expect(TokenType.greaterThan);
+      state.tokens[state.tokens.length - 1].isType = true;
+    } else {
+      expect(TokenType.greaterThan);
+      popTypeContext(oldIsType);
+    }
   }
 
   function tsIsDeclarationStart() {
@@ -4747,16 +5173,17 @@ const transform=(()=>{
         case ContextualKeyword._namespace:
         case ContextualKeyword._type:
           return true;
+        default:
+          break;
       }
     }
 
     return false;
   }
 
-// ======================================================
-// OVERRIDES
-// ======================================================
-
+  // ======================================================
+  // OVERRIDES
+  // ======================================================
   function tsParseFunctionBodyAndFinish(functionStart, funcContextId) {
     // For arrow functions, `parseArrow` handles the return type itself.
     if (match(TokenType.colon)) {
@@ -4769,12 +5196,7 @@ const transform=(()=>{
     if (!match(TokenType.braceL) && isLineTerminator()) {
       // Retroactively mark the function declaration as a type.
       let i = state.tokens.length - 1;
-      while (
-        i >= 0 &&
-        (state.tokens[i].start >= functionStart ||
-          state.tokens[i].type === TokenType._default ||
-          state.tokens[i].type === TokenType._export)
-        ) {
+      while (i >= 0 && (state.tokens[i].start >= functionStart || state.tokens[i].type === TokenType._default || state.tokens[i].type === TokenType._export)) {
         state.tokens[i].isType = true;
         i--;
       }
@@ -4784,21 +5206,16 @@ const transform=(()=>{
     parseFunctionBody(false, funcContextId);
   }
 
-  function tsParseSubscript(
-    startTokenIndex,
-    noCalls,
-    stopState,
-  ) {
+  function tsParseSubscript(startTokenIndex, noCalls, stopState) {
     if (!hasPrecedingLineBreak() && eat(TokenType.bang)) {
       state.tokens[state.tokens.length - 1].type = TokenType.nonNullAssertion;
       return;
     }
 
-    if (match(TokenType.lessThan)) {
+    if (match(TokenType.lessThan) || match(TokenType.bitShiftL)) {
       // There are number of things we are going to "maybe" parse, like type arguments on
       // tagged template expressions. If any of them fail, walk it back and continue.
       const snapshot = state.snapshot();
-
       if (!noCalls && atPossibleAsync()) {
         // Almost certainly this is a generic async function `async <T>() => ...
         // But it might be a call with a type argument `async<T>();`
@@ -4807,7 +5224,7 @@ const transform=(()=>{
           return;
         }
       }
-      tsParseTypeArguments();
+      tsParseTypeArgumentsWithPossibleBitshift();
       if (!noCalls && eat(TokenType.parenL)) {
         // With f<T>(), the subscriptStartIndex marker is on the ( token.
         state.tokens[state.tokens.length - 1].subscriptStartIndex = startTokenIndex;
@@ -4815,10 +5232,18 @@ const transform=(()=>{
       } else if (match(TokenType.backQuote)) {
         // Tagged template with a type argument.
         parseTemplate();
-      } else {
+      } else if (
+        // The remaining possible case is an instantiation expression, e.g.
+        // Array<number> . Check for a few cases that would disqualify it and
+        // cause us to bail out.
+        // a<b>>c is not (a<b>)>c, but a<(b>>c)
+        state.type === TokenType.greaterThan || // a<b>c is (a<b)>c
+        state.type !== TokenType.parenL && Boolean(state.type & TokenType.IS_EXPRESSION_START) && !hasPrecedingLineBreak()
+      ) {
+        // Bail out. We have something like a<b>c, which is not an expression with
+        // type arguments but an (a < b) > c comparison.
         unexpected();
       }
-
       if (state.error) {
         state.restoreFromSnapshot(snapshot);
       } else {
@@ -4830,29 +5255,12 @@ const transform=(()=>{
       state.tokens[startTokenIndex].isOptionalChainStart = true;
       // With f?.<T>(), the subscriptStartIndex marker is on the ?. token.
       state.tokens[state.tokens.length - 1].subscriptStartIndex = startTokenIndex;
-
       tsParseTypeArguments();
       expect(TokenType.parenL);
       parseCallExpressionArguments();
     }
+
     baseParseSubscript(startTokenIndex, noCalls, stopState);
-  }
-
-  function tsStartParseNewArguments() {
-    if (match(TokenType.lessThan)) {
-      // 99% certain this is `new C<T>();`. But may be `new C < T;`, which is also legal.
-      const snapshot = state.snapshot();
-
-      state.type = TokenType.typeParameterStart;
-      tsParseTypeArguments();
-      if (!match(TokenType.parenL)) {
-        unexpected();
-      }
-
-      if (state.error) {
-        state.restoreFromSnapshot(snapshot);
-      }
-    }
   }
 
   function tsTryParseExport() {
@@ -4879,20 +5287,110 @@ const transform=(()=>{
       semicolon();
       return true;
     } else {
-      if (isContextual(ContextualKeyword._type) && lookaheadType() === TokenType.braceL) {
-        next();
+      if (isContextual(ContextualKeyword._type)) {
+        const nextType = lookaheadType();
+        // export type {foo} from 'a';
+        // export type * from 'a';'
+        // export type * as ns from 'a';'
+        if (nextType === TokenType.braceL || nextType === TokenType.star) {
+          next();
+        }
       }
       return false;
     }
   }
 
+  /**
+   * Parse a TS import specifier, which may be prefixed with "type" and may be of
+   * the form `foo as bar`.
+   *
+   * The number of identifier-like tokens we see happens to be enough to uniquely
+   * identify the form, so simply count the number of identifiers rather than
+   * matching the words `type` or `as`. This is particularly important because
+   * `type` and `as` could each actually be plain identifiers rather than
+   * keywords.
+   */
+  function tsParseImportSpecifier() {
+    parseIdentifier();
+    if (match(TokenType.comma) || match(TokenType.braceR)) {
+      // import {foo}
+      state.tokens[state.tokens.length - 1].identifierRole = IdentifierRole.ImportDeclaration;
+      return;
+    }
+
+    parseIdentifier();
+    if (match(TokenType.comma) || match(TokenType.braceR)) {
+      // import {type foo}
+      state.tokens[state.tokens.length - 1].identifierRole = IdentifierRole.ImportDeclaration;
+      state.tokens[state.tokens.length - 2].isType = true;
+      state.tokens[state.tokens.length - 1].isType = true;
+      return;
+    }
+
+    parseIdentifier();
+    if (match(TokenType.comma) || match(TokenType.braceR)) {
+      // import {foo as bar}
+      state.tokens[state.tokens.length - 3].identifierRole = IdentifierRole.ImportAccess;
+      state.tokens[state.tokens.length - 1].identifierRole = IdentifierRole.ImportDeclaration;
+      return;
+    }
+
+    parseIdentifier();
+    // import {type foo as bar}
+    state.tokens[state.tokens.length - 3].identifierRole = IdentifierRole.ImportAccess;
+    state.tokens[state.tokens.length - 1].identifierRole = IdentifierRole.ImportDeclaration;
+    state.tokens[state.tokens.length - 4].isType = true;
+    state.tokens[state.tokens.length - 3].isType = true;
+    state.tokens[state.tokens.length - 2].isType = true;
+    state.tokens[state.tokens.length - 1].isType = true;
+  }
+
+  /**
+   * Just like named import specifiers, export specifiers can have from 1 to 4
+   * tokens, inclusive, and the number of tokens determines the role of each token.
+   */
+  function tsParseExportSpecifier() {
+    parseIdentifier();
+    if (match(TokenType.comma) || match(TokenType.braceR)) {
+      // export {foo}
+      state.tokens[state.tokens.length - 1].identifierRole = IdentifierRole.ExportAccess;
+      return;
+    }
+
+    parseIdentifier();
+    if (match(TokenType.comma) || match(TokenType.braceR)) {
+      // export {type foo}
+      state.tokens[state.tokens.length - 1].identifierRole = IdentifierRole.ExportAccess;
+      state.tokens[state.tokens.length - 2].isType = true;
+      state.tokens[state.tokens.length - 1].isType = true;
+      return;
+    }
+
+    parseIdentifier();
+    if (match(TokenType.comma) || match(TokenType.braceR)) {
+      // export {foo as bar}
+      state.tokens[state.tokens.length - 3].identifierRole = IdentifierRole.ExportAccess;
+      return;
+    }
+
+    parseIdentifier();
+    // export {type foo as bar}
+    state.tokens[state.tokens.length - 3].identifierRole = IdentifierRole.ExportAccess;
+    state.tokens[state.tokens.length - 4].isType = true;
+    state.tokens[state.tokens.length - 3].isType = true;
+    state.tokens[state.tokens.length - 2].isType = true;
+    state.tokens[state.tokens.length - 1].isType = true;
+  }
+
   function tsTryParseExportDefaultExpression() {
     if (isContextual(ContextualKeyword._abstract) && lookaheadType() === TokenType._class) {
       state.type = TokenType._abstract;
-      next(); // Skip "abstract"
+      next();
+      // Skip "abstract"
       parseClass(true, true);
       return true;
     }
+
     if (isContextual(ContextualKeyword._interface)) {
       // Make sure "export default" are considered type tokens so the whole thing is removed.
       const oldIsType = pushTypeContext(2);
@@ -4900,6 +5398,7 @@ const transform=(()=>{
       popTypeContext(oldIsType);
       return true;
     }
+
     return false;
   }
 
@@ -4914,6 +5413,7 @@ const transform=(()=>{
         return true;
       }
     }
+
     return false;
   }
 
@@ -4924,30 +5424,28 @@ const transform=(()=>{
       ContextualKeyword._readonly,
       ContextualKeyword._declare,
       ContextualKeyword._static,
-      ContextualKeyword._override,
+      ContextualKeyword._override
     ]);
-
     const modifiersEndIndex = state.tokens.length;
     const found = tsTryParseIndexSignature();
     if (found) {
       // Index signatures are type declarations, so set the modifier tokens as
       // type tokens. Most tokens could be assumed to be type tokens, but `static`
       // is ambiguous unless we set it explicitly here.
-      const memberStartIndex = isStatic
-        ? memberStartIndexAfterStatic - 1
-        : memberStartIndexAfterStatic;
+      const memberStartIndex = isStatic ? memberStartIndexAfterStatic - 1 : memberStartIndexAfterStatic;
       for (let i = memberStartIndex; i < modifiersEndIndex; i++) {
         state.tokens[i].isType = true;
       }
       return true;
     }
+
     return false;
   }
 
-// Note: The reason we do this in `parseIdentifierStatement` and not `parseStatement`
-// is that e.g. `type()` is valid JS, so we must try parsing that first.
-// If it's really a type, we will parse `type` as the statement, and can correct it here
-// by parsing the rest.
+  // Note: The reason we do this in `parseIdentifierStatement` and not `parseStatement`
+  // is that e.g. `type()` is valid JS, so we must try parsing that first.
+  // If it's really a type, we will parse `type` as the statement, and can correct it here
+  // by parsing the rest.
   function tsParseIdentifierStatement(contextualKeyword) {
     const matched = tsParseExpressionStatement(contextualKeyword);
     if (!matched) {
@@ -4972,6 +5470,7 @@ const transform=(()=>{
         matchedDeclaration = tsTryParseExportDeclaration();
       }
     }
+
     if (!matchedDeclaration) {
       if (isDeclare) {
         const oldIsType = pushTypeContext(2);
@@ -4984,9 +5483,10 @@ const transform=(()=>{
   }
 
   function tsAfterParseClassSuper(hasSuper) {
-    if (hasSuper && match(TokenType.lessThan)) {
-      tsParseTypeArguments();
+    if (hasSuper && (match(TokenType.lessThan) || match(TokenType.bitShiftL))) {
+      tsParseTypeArgumentsWithPossibleBitshift();
     }
+
     if (eatContextual(ContextualKeyword._implements)) {
       state.tokens[state.tokens.length - 1].type = TokenType._implements;
       const oldIsType = pushTypeContext(1);
@@ -5003,51 +5503,53 @@ const transform=(()=>{
     tsTryParseTypeParameters();
   }
 
-// `let x: number;`
+  // `let x: number;`
   function tsAfterParseVarHead() {
     const oldIsType = pushTypeContext(0);
-    eat(TokenType.bang);
+    if (!hasPrecedingLineBreak()) {
+      eat(TokenType.bang);
+    }
+
     tsTryParseTypeAnnotation();
     popTypeContext(oldIsType);
   }
 
-// parse the return type of an async arrow function - let foo = (async (): number => {});
+  // parse the return type of an async arrow function - let foo = (async (): number => {});
   function tsStartParseAsyncArrowFromCallExpression() {
     if (match(TokenType.colon)) {
       tsParseTypeAnnotation();
     }
   }
 
-// Returns true if the expression was an arrow function.
+  // Returns true if the expression was an arrow function.
   function tsParseMaybeAssign(noIn, isWithinParens) {
-    // Note: When the JSX plugin is on, type assertions (`<T> x`) aren't valid syntax.
-    {
-      return tsParseMaybeAssignWithoutJSX(noIn, isWithinParens);
-    }
+    return tsParseMaybeAssignWithJSX(noIn, isWithinParens);
   }
 
-  function tsParseMaybeAssignWithoutJSX(noIn, isWithinParens) {
+  function tsParseMaybeAssignWithJSX(noIn, isWithinParens) {
     if (!match(TokenType.lessThan)) {
       return baseParseMaybeAssign(noIn, isWithinParens);
     }
 
+    // Prefer to parse JSX if possible. But may be an arrow fn.
     const snapshot = state.snapshot();
-    // This is similar to TypeScript's `tryParseParenthesizedArrowFunctionExpression`.
-    tsParseTypeParameters();
-    const wasArrow = baseParseMaybeAssign(noIn, isWithinParens);
-    if (!wasArrow) {
-      unexpected();
-    }
+    let wasArrow = baseParseMaybeAssign(noIn, isWithinParens);
     if (state.error) {
       state.restoreFromSnapshot(snapshot);
     } else {
       return wasArrow;
     }
 
-    // Try parsing a type cast instead of an arrow function.
-    // This will start with a type assertion (via parseMaybeUnary).
-    // But don't directly call `tsParseTypeAssertion` because we want to handle any binary after it.
-    return baseParseMaybeAssign(noIn, isWithinParens);
+    // Otherwise, try as type-parameterized arrow function.
+    state.type = TokenType.typeParameterStart;
+    // This is similar to TypeScript's `tryParseParenthesizedArrowFunctionExpression`.
+    tsParseTypeParameters();
+    wasArrow = baseParseMaybeAssign(noIn, isWithinParens);
+    if (!wasArrow) {
+      unexpected();
+    }
+
+    return wasArrow;
   }
 
   function tsParseArrow() {
@@ -5055,19 +5557,18 @@ const transform=(()=>{
       // This is different from how the TS parser does it.
       // TS uses lookahead. Babylon parses it as a parenthesized expression and converts.
       const snapshot = state.snapshot();
-
       tsParseTypeOrTypePredicateAnnotation(TokenType.colon);
       if (canInsertSemicolon()) unexpected();
       if (!match(TokenType.arrow)) unexpected();
-
       if (state.error) {
         state.restoreFromSnapshot(snapshot);
       }
     }
+
     return eat(TokenType.arrow);
   }
 
-// Allow type annotations inside of a parameter list.
+  // Allow type annotations inside of a parameter list.
   function tsParseAssignableListItemTypes() {
     const oldIsType = pushTypeContext(0);
     eat(TokenType.question);
@@ -5076,17 +5577,351 @@ const transform=(()=>{
   }
 
   function tsParseMaybeDecoratorArguments() {
-    if (match(TokenType.lessThan)) {
-      tsParseTypeArguments();
+    if (match(TokenType.lessThan) || match(TokenType.bitShiftL)) {
+      tsParseTypeArgumentsWithPossibleBitshift();
     }
+
     baseParseMaybeDecoratorArguments();
   }
 
-  /**
+    /**
+   * Read token with JSX contents.
+   *
+   * In addition to detecting jsxTagStart and also regular tokens that might be
+   * part of an expression, this code detects the start and end of text ranges
+   * within JSX children. In order to properly count the number of children, we
+   * distinguish jsxText from jsxEmptyText, which is a text range that simplifies
+   * to the empty string after JSX whitespace trimming.
+   *
+   * It turns out that a JSX text range will simplify to the empty string if and
+   * only if both of these conditions hold:
+   * - The range consists entirely of whitespace characters (only counting space,
+   *   tab, \r, and \n).
+   * - The range has at least one newline.
+   * This can be proven by analyzing any implementation of whitespace trimming,
+   * e.g. formatJSXTextLiteral in Sucrase or cleanJSXElementLiteralChild in Babel.
+   */
+  function jsxReadToken() {
+    let sawNewline = false;
+    let sawNonWhitespace = false;
+    while (true) {
+      if (state.pos >= input.length) {
+        unexpected("Unterminated JSX contents");
+        return;
+      }
+      const ch = input.charCodeAt(state.pos);
+      if (ch === charCodes.lessThan || ch === charCodes.leftCurlyBrace) {
+        if (state.pos === state.start) {
+          if (ch === charCodes.lessThan) {
+            state.pos++;
+            finishToken(TokenType.jsxTagStart);
+            return;
+          }
+          getTokenFromCode(ch);
+          return;
+        }
+        if (sawNewline && !sawNonWhitespace) {
+          finishToken(TokenType.jsxEmptyText);
+        } else {
+          finishToken(TokenType.jsxText);
+        }
+        return;
+      }
+      // This is part of JSX text.
+      if (ch === charCodes.lineFeed) {
+        sawNewline = true;
+      } else if (ch !== charCodes.space && ch !== charCodes.carriageReturn && ch !== charCodes.tab) {
+        sawNonWhitespace = true;
+      }
+      state.pos++;
+    }
+  }
+
+  function jsxReadString(quote) {
+    state.pos++;
+    for (; ; ) {
+      if (state.pos >= input.length) {
+        unexpected("Unterminated string constant");
+        return;
+      }
+      const ch = input.charCodeAt(state.pos);
+      if (ch === quote) {
+        state.pos++;
+        break;
+      }
+      state.pos++;
+    }
+
+    finishToken(TokenType.string);
+  }
+
+  // Read a JSX identifier (valid tag or attribute name).
+  //
+  // Optimized version since JSX identifiers can't contain
+  // escape characters and so can be read as single slice.
+  // Also assumes that first character was already checked
+  // by isIdentifierStart in readToken.
+  function jsxReadWord() {
+    let ch;
+    do {
+      if (state.pos > input.length) {
+        unexpected("Unexpectedly reached the end of input.");
+        return;
+      }
+      ch = input.charCodeAt(++state.pos);
+    } while (IS_IDENTIFIER_CHAR[ch] || ch === charCodes.dash);
+    finishToken(TokenType.jsxName);
+  }
+
+  // Parse next token as JSX identifier
+  function jsxParseIdentifier() {
+    nextJSXTagToken();
+  }
+
+  // Parse namespaced identifier.
+  function jsxParseNamespacedName(identifierRole) {
+    jsxParseIdentifier();
+    if (!eat(TokenType.colon)) {
+      // Plain identifier, so this is an access.
+      state.tokens[state.tokens.length - 1].identifierRole = identifierRole;
+      return;
+    }
+
+    // Process the second half of the namespaced name.
+    jsxParseIdentifier();
+  }
+
+  // Parses element name in any form - namespaced, member
+  // or single identifier.
+  function jsxParseElementName() {
+    const firstTokenIndex = state.tokens.length;
+    jsxParseNamespacedName(IdentifierRole.Access);
+    let hadDot = false;
+    while (match(TokenType.dot)) {
+      hadDot = true;
+      nextJSXTagToken();
+      jsxParseIdentifier();
+    }
+
+    // For tags like <div> with a lowercase letter and no dots, the name is
+    // actually *not* an identifier access, since it's referring to a built-in
+    // tag name. Remove the identifier role in this case so that it's not
+    // accidentally transformed by the imports transform when preserving JSX.
+    if (!hadDot) {
+      const firstToken = state.tokens[firstTokenIndex];
+      const firstChar = input.charCodeAt(firstToken.start);
+      if (firstChar >= charCodes.lowercaseA && firstChar <= charCodes.lowercaseZ) {
+        firstToken.identifierRole = null;
+      }
+    }
+  }
+
+  // Parses any type of JSX attribute value.
+  function jsxParseAttributeValue() {
+    switch (state.type) {
+      case TokenType.braceL:
+        next();
+        parseExpression();
+        nextJSXTagToken();
+        return;
+      case TokenType.jsxTagStart:
+        jsxParseElement();
+        nextJSXTagToken();
+        return;
+      case TokenType.string:
+        nextJSXTagToken();
+        return;
+      default:
+        unexpected("JSX value should be either an expression or a quoted JSX text");
+    }
+  }
+
+  // Parse JSX spread child, after already processing the {
+  // Does not parse the closing }
+  function jsxParseSpreadChild() {
+    expect(TokenType.ellipsis);
+    parseExpression();
+  }
+
+  // Parses JSX opening tag starting after "<".
+  // Returns true if the tag was self-closing.
+  // Does not parse the last token.
+  function jsxParseOpeningElement(initialTokenIndex) {
+    if (match(TokenType.jsxTagEnd)) {
+      // This is an open-fragment.
+      return false;
+    }
+
+    jsxParseElementName();
+    tsTryParseJSXTypeArgument();
+    let hasSeenPropSpread = false;
+    while (!match(TokenType.slash) && !match(TokenType.jsxTagEnd) && !state.error) {
+      if (eat(TokenType.braceL)) {
+        hasSeenPropSpread = true;
+        expect(TokenType.ellipsis);
+        parseMaybeAssign();
+        // }
+        nextJSXTagToken();
+        continue;
+      }
+      if (hasSeenPropSpread && state.end - state.start === 3 && input.charCodeAt(state.start) === charCodes.lowercaseK && input.charCodeAt(state.start + 1) === charCodes.lowercaseE && input.charCodeAt(state.start + 2) === charCodes.lowercaseY) {
+        state.tokens[initialTokenIndex].jsxRole = JSXRole.KeyAfterPropSpread;
+      }
+      jsxParseNamespacedName(IdentifierRole.ObjectKey);
+      if (match(TokenType.eq)) {
+        nextJSXTagToken();
+        jsxParseAttributeValue();
+      }
+    }
+
+    const isSelfClosing = match(TokenType.slash);
+    if (isSelfClosing) {
+      // /
+      nextJSXTagToken();
+    }
+
+    return isSelfClosing;
+  }
+
+  // Parses JSX closing tag starting after "</".
+  // Does not parse the last token.
+  function jsxParseClosingElement() {
+    if (match(TokenType.jsxTagEnd)) {
+      // Fragment syntax, so we immediately have a tag end.
+      return;
+    }
+
+    jsxParseElementName();
+  }
+
+  // Parses entire JSX element, including its opening tag
+  // (starting after "<"), attributes, contents and closing tag.
+  // Does not parse the last token.
+  function jsxParseElementAt() {
+    const initialTokenIndex = state.tokens.length - 1;
+    state.tokens[initialTokenIndex].jsxRole = JSXRole.NoChildren;
+    let numExplicitChildren = 0;
+    const isSelfClosing = jsxParseOpeningElement(initialTokenIndex);
+    if (!isSelfClosing) {
+      nextJSXExprToken();
+      while (true) {
+        switch (state.type) {
+          case TokenType.jsxTagStart:
+            nextJSXTagToken();
+            if (match(TokenType.slash)) {
+              nextJSXTagToken();
+              jsxParseClosingElement();
+              // Key after prop spread takes precedence over number of children,
+              // since it means we switch to createElement, which doesn't care
+              // about number of children.
+              if (state.tokens[initialTokenIndex].jsxRole !== JSXRole.KeyAfterPropSpread) {
+                if (numExplicitChildren === 1) {
+                  state.tokens[initialTokenIndex].jsxRole = JSXRole.OneChild;
+                } else if (numExplicitChildren > 1) {
+                  state.tokens[initialTokenIndex].jsxRole = JSXRole.StaticChildren;
+                }
+              }
+              return;
+            }
+            numExplicitChildren++;
+            jsxParseElementAt();
+            nextJSXExprToken();
+            break;
+          case TokenType.jsxText:
+            numExplicitChildren++;
+            nextJSXExprToken();
+            break;
+          case TokenType.jsxEmptyText:
+            nextJSXExprToken();
+            break;
+          case TokenType.braceL:
+            next();
+            if (match(TokenType.ellipsis)) {
+              jsxParseSpreadChild();
+              nextJSXExprToken();
+              // Spread children are a mechanism to explicitly mark children as
+              // static, so count it as 2 children to satisfy the "more than one
+              // child" condition.
+              numExplicitChildren += 2;
+            } else {
+              // If we see {}, this is an empty pseudo-expression that doesn't
+              // count as a child.
+              if (!match(TokenType.braceR)) {
+                numExplicitChildren++;
+                parseExpression();
+              }
+              nextJSXExprToken();
+            }
+            break;
+          // istanbul ignore next - should never happen
+          default:
+            unexpected();
+            return;
+        }
+      }
+    }
+  }
+
+  // Parses entire JSX element from current position.
+  // Does not parse the last token.
+  function jsxParseElement() {
+    nextJSXTagToken();
+    jsxParseElementAt();
+  }
+
+  // ==================================
+  // Overrides
+  // ==================================
+  function nextJSXTagToken() {
+    state.tokens.push(new Token());
+    skipSpace();
+    state.start = state.pos;
+    const code = input.charCodeAt(state.pos);
+    if (IS_IDENTIFIER_START[code]) {
+      jsxReadWord();
+    } else if (code === charCodes.quotationMark || code === charCodes.apostrophe) {
+      jsxReadString(code);
+    } else {
+      // The following tokens are just one character each.
+      ++state.pos;
+      switch (code) {
+        case charCodes.greaterThan:
+          finishToken(TokenType.jsxTagEnd);
+          break;
+        case charCodes.lessThan:
+          finishToken(TokenType.jsxTagStart);
+          break;
+        case charCodes.slash:
+          finishToken(TokenType.slash);
+          break;
+        case charCodes.equalsTo:
+          finishToken(TokenType.eq);
+          break;
+        case charCodes.leftCurlyBrace:
+          finishToken(TokenType.braceL);
+          break;
+        case charCodes.dot:
+          finishToken(TokenType.dot);
+          break;
+        case charCodes.colon:
+          finishToken(TokenType.colon);
+          break;
+        default:
+          unexpected();
+      }
+    }
+  }
+
+  function nextJSXExprToken() {
+    state.tokens.push(new Token());
+    state.start = state.pos;
+    jsxReadToken();
+  }
+
+    /**
    * Common parser code for TypeScript and Flow.
    */
-
-// An apparent conditional expression could actually be an optional parameter in an arrow function.
+  // An apparent conditional expression could actually be an optional parameter in an arrow function.
   function typedParseConditional(noIn) {
     // If we see ?:, this can't possibly be a valid conditional. typedParseParenItem will be called
     // later to finish off the arrow parameter. We also need to handle bare ? tokens for optional
@@ -5097,37 +5932,48 @@ const transform=(()=>{
         return;
       }
     }
+
     baseParseConditional(noIn);
   }
 
-// Note: These "type casts" are *not* valid TS expressions.
-// But we parse them here and change them when completing the arrow function.
+  // Note: These "type casts" are *not* valid TS expressions.
+  // But we parse them here and change them when completing the arrow function.
   function typedParseParenItem() {
     eatTypeToken(TokenType.question);
     if (match(TokenType.colon)) {
-      {
-        tsParseTypeAnnotation();
-      }
+      tsParseTypeAnnotation();
     }
   }
 
-  /* eslint max-len: 0 */
-  const isJSXEnabled=false;
-
+    /* eslint max-len: 0 */
+  // A recursive descent parser operates by defining functions for all
+  // syntactic elements, and recursively calling those, each function
+  // advancing the input stream and returning an AST node. Precedence
+  // of constructs (for example, the fact that `!x[1]` means `!(x[1])`
+  // instead of `(!x)[1]` is handled by the fact that the parser
+  // function that parses unary prefix operators is called first, and
+  // in turn calls the function that parses `[]` subscripts — that
+  // way, it'll receive the node for `x[1]` already parsed, and wraps
+  // *that* in the unary operator node.
+  //
+  // Acorn uses an [operator precedence parser][opp] to handle binary
+  // operator precedence, because it is much more compact than using
+  // the technique outlined above, which uses different, nesting
+  // functions to specify precedence, for all of the ten binary
+  // precedence levels that JavaScript defines.
+  //
+  // [opp]: http://en.wikipedia.org/wiki/Operator-precedence_parser
   class StopState {
-
     constructor(stop) {
       this.stop = stop;
     }
-  }
-
-// ### Expression parsing
-
-// These nest, from the most general expression type at the top to
-// 'atomic', nondivisible expression types at the bottom. Most of
-// the functions will simply let the function (s) below them parse,
-// and, *if* the syntactic construct they handle is present, wrap
-// the AST node that the inner parser gave them in another node.
+  };
+  // ### Expression parsing
+  // These nest, from the most general expression type at the top to
+  // 'atomic', nondivisible expression types at the bottom. Most of
+  // the functions will simply let the function (s) below them parse,
+  // and, *if* the syntactic construct they handle is present, wrap
+  // the AST node that the inner parser gave them in another node.
   function parseExpression(noIn = false) {
     parseMaybeAssign(noIn);
     if (match(TokenType.comma)) {
@@ -5145,14 +5991,12 @@ const transform=(()=>{
    * In these cases, we should allow : and ?: after the initial "left" part.
    */
   function parseMaybeAssign(noIn = false, isWithinParens = false) {
-    {
-      return tsParseMaybeAssign(noIn, isWithinParens);
-    }
+    return tsParseMaybeAssign(noIn, isWithinParens);
   }
 
-// Parse an assignment expression. This includes applications of
-// operators like `+=`.
-// Returns true if the expression was an arrow function.
+  // Parse an assignment expression. This includes applications of
+  // operators like `+=`.
+  // Returns true if the expression was an arrow function.
   function baseParseMaybeAssign(noIn, isWithinParens) {
     if (match(TokenType._yield)) {
       parseYield();
@@ -5167,28 +6011,33 @@ const transform=(()=>{
     if (isWithinParens) {
       parseParenItem();
     }
+
     if (state.type & TokenType.IS_ASSIGN) {
       next();
       parseMaybeAssign(noIn);
       return false;
     }
+
     return wasArrow;
   }
 
-// Parse a ternary conditional (`?:`) operator.
-// Returns true if the expression was an arrow function.
+  // Parse a ternary conditional (`?:`) operator.
+  // Returns true if the expression was an arrow function.
   function parseMaybeConditional(noIn) {
     const wasArrow = parseExprOps(noIn);
     if (wasArrow) {
       return true;
     }
+
     parseConditional(noIn);
     return false;
   }
 
   function parseConditional(noIn) {
-    {
+    if (true || false) {
       typedParseConditional(noIn);
+    } else {
+      baseParseConditional(noIn);
     }
   }
 
@@ -5200,33 +6049,30 @@ const transform=(()=>{
     }
   }
 
-// Start the precedence parser.
-// Returns true if this was an arrow function
+  // Start the precedence parser.
+  // Returns true if this was an arrow function
   function parseExprOps(noIn) {
     const startTokenIndex = state.tokens.length;
     const wasArrow = parseMaybeUnary();
     if (wasArrow) {
       return true;
     }
+
     parseExprOp(startTokenIndex, -1, noIn);
     return false;
   }
 
-// Parse binary operators with the operator precedence parsing
-// algorithm. `left` is the left-hand side of the operator.
-// `minPrec` provides context that allows the function to stop and
-// defer further parser to one of its callers when it encounters an
-// operator that has a lower precedence than the set it is parsing.
+  // Parse binary operators with the operator precedence parsing
+  // algorithm. `left` is the left-hand side of the operator.
+  // `minPrec` provides context that allows the function to stop and
+  // defer further parser to one of its callers when it encounters an
+  // operator that has a lower precedence than the set it is parsing.
   function parseExprOp(startTokenIndex, minPrec, noIn) {
-    if (
-      (TokenType._in & TokenType.PRECEDENCE_MASK) > minPrec &&
-      !hasPrecedingLineBreak() &&
-      eatContextual(ContextualKeyword._as)
-    ) {
-      state.tokens[state.tokens.length - 1].type = TokenType._as;
+    if (true && (TokenType._in & TokenType.PRECEDENCE_MASK) > minPrec && !hasPrecedingLineBreak() && (eatContextual(ContextualKeyword._as) || eatContextual(ContextualKeyword._satisfies))) {
       const oldIsType = pushTypeContext(1);
       tsParseType();
       popTypeContext(oldIsType);
+      rescan_gt();
       parseExprOp(startTokenIndex, minPrec, noIn);
       return;
     }
@@ -5239,7 +6085,6 @@ const transform=(()=>{
         if (op === TokenType.nullishCoalescing) {
           state.tokens[state.tokens.length - 1].nullishStartIndex = startTokenIndex;
         }
-
         const rhsStartTokenIndex = state.tokens.length;
         parseMaybeUnary();
         // Extend the right operand of this operator if possible.
@@ -5254,21 +6099,19 @@ const transform=(()=>{
     }
   }
 
-// Parse unary operators, both prefix and postfix.
-// Returns true if this was an arrow function.
+  // Parse unary operators, both prefix and postfix.
+  // Returns true if this was an arrow function.
   function parseMaybeUnary() {
-    if (eat(TokenType.lessThan)) {
+    if (true && !true && eat(TokenType.lessThan)) {
       tsParseTypeAssertion();
       return false;
     }
-    if (
-      isContextual(ContextualKeyword._module) &&
-      lookaheadCharCode() === charCodes.leftCurlyBrace &&
-      !hasFollowingLineBreak()
-    ) {
+
+    if (isContextual(ContextualKeyword._module) && lookaheadCharCode() === charCodes.leftCurlyBrace && !hasFollowingLineBreak()) {
       parseModuleExpression();
       return false;
     }
+
     if (state.type & TokenType.IS_PREFIX) {
       next();
       parseMaybeUnary();
@@ -5279,6 +6122,7 @@ const transform=(()=>{
     if (wasArrow) {
       return true;
     }
+
     while (state.type & TokenType.IS_POSTFIX && !canInsertSemicolon()) {
       // The tokenizer calls everything a preincrement, so make it a postincrement when
       // we see it in that context.
@@ -5287,30 +6131,31 @@ const transform=(()=>{
       }
       next();
     }
+
     return false;
   }
 
-// Parse call, dot, and `[]`-subscript expressions.
-// Returns true if this was an arrow function.
+  // Parse call, dot, and `[]`-subscript expressions.
+  // Returns true if this was an arrow function.
   function parseExprSubscripts() {
     const startTokenIndex = state.tokens.length;
     const wasArrow = parseExprAtom();
     if (wasArrow) {
       return true;
     }
+
     parseSubscripts(startTokenIndex);
     // If there was any optional chain operation, the start token would be marked
     // as such, so also mark the end now.
     if (state.tokens.length > startTokenIndex && state.tokens[startTokenIndex].isOptionalChainStart) {
       state.tokens[state.tokens.length - 1].isOptionalChainEnd = true;
     }
+
     return false;
   }
 
   function parseSubscripts(startTokenIndex, noCalls = false) {
-    {
-      baseParseSubscripts(startTokenIndex, noCalls);
-    }
+    baseParseSubscripts(startTokenIndex, noCalls);
   }
 
   function baseParseSubscripts(startTokenIndex, noCalls = false) {
@@ -5321,17 +6166,11 @@ const transform=(()=>{
   }
 
   function parseSubscript(startTokenIndex, noCalls, stopState) {
-    {
-      tsParseSubscript(startTokenIndex, noCalls, stopState);
-    }
+    tsParseSubscript(startTokenIndex, noCalls, stopState);
   }
 
   /** Set 'state.stop = true' to indicate that we should stop parsing subscripts. */
-  function baseParseSubscript(
-    startTokenIndex,
-    noCalls,
-    stopState,
-  ) {
+  function baseParseSubscript(startTokenIndex, noCalls, stopState) {
     if (!noCalls && eat(TokenType.doubleColon)) {
       parseNoCallExpr();
       stopState.stop = true;
@@ -5346,7 +6185,6 @@ const transform=(()=>{
       }
       next();
       state.tokens[state.tokens.length - 1].subscriptStartIndex = startTokenIndex;
-
       if (eat(TokenType.bracketL)) {
         parseExpression();
         expect(TokenType.bracketR);
@@ -5370,19 +6208,15 @@ const transform=(()=>{
         const asyncStartTokenIndex = state.tokens.length;
         next();
         state.tokens[state.tokens.length - 1].subscriptStartIndex = startTokenIndex;
-
         const callContextId = getNextContextId();
-
         state.tokens[state.tokens.length - 1].contextId = callContextId;
         parseCallExpressionArguments();
         state.tokens[state.tokens.length - 1].contextId = callContextId;
-
         if (shouldParseAsyncArrow()) {
           // We hit an arrow, so backtrack and start again parsing function parameters.
           state.restoreFromSnapshot(snapshot);
           stopState.stop = true;
           state.scopeDepth++;
-
           parseFunctionParams();
           parseAsyncArrowFromCallExpression(asyncStartTokenIndex);
         }
@@ -5405,10 +6239,7 @@ const transform=(()=>{
   function atPossibleAsync() {
     // This was made less strict than the original version to avoid passing around nodes, but it
     // should be safe to have rare false positives here.
-    return (
-      state.tokens[state.tokens.length - 1].contextualKeyword === ContextualKeyword._async &&
-      !canInsertSemicolon()
-    );
+    return state.tokens[state.tokens.length - 1].contextualKeyword === ContextualKeyword._async && !canInsertSemicolon();
   }
 
   function parseCallExpressionArguments() {
@@ -5422,7 +6253,6 @@ const transform=(()=>{
           break;
         }
       }
-
       parseExprListItem(false);
     }
   }
@@ -5432,26 +6262,23 @@ const transform=(()=>{
   }
 
   function parseAsyncArrowFromCallExpression(startTokenIndex) {
-    {
-      tsStartParseAsyncArrowFromCallExpression();
-    }
+    tsStartParseAsyncArrowFromCallExpression();
     expect(TokenType.arrow);
     parseArrowExpression(startTokenIndex);
   }
 
-// Parse a no-call expression (like argument of `new` or `::` operators).
-
+  // Parse a no-call expression (like argument of `new` or `::` operators).
   function parseNoCallExpr() {
     const startTokenIndex = state.tokens.length;
     parseExprAtom();
     parseSubscripts(startTokenIndex, true);
   }
 
-// Parse an atomic expression — either a single token that is an
-// expression, an expression started by a keyword like `function` or
-// `new`, or an expression wrapped in punctuation like `()`, `[]`,
-// or `{}`.
-// Returns true if the parsed expression was an arrow function.
+  // Parse an atomic expression — either a single token that is an
+  // expression, an expression started by a keyword like `function` or
+  // `new`, or an expression wrapped in punctuation like `()`, `[]`,
+  // or `{}`.
+  // Returns true if the parsed expression was an arrow function.
   function parseExprAtom() {
     if (eat(TokenType.modulo)) {
       // V8 intrinsic expression. Just parse the identifier, and the function invocation is parsed
@@ -5460,14 +6287,13 @@ const transform=(()=>{
       return false;
     }
 
-    if (match(TokenType.jsxText)) {
+    if (match(TokenType.jsxText) || match(TokenType.jsxEmptyText)) {
       parseLiteral();
       return false;
-    } else if (match(TokenType.lessThan) && isJSXEnabled) {
-      // isJSXenabled false
-      // state.type = tt.jsxTagStart;
-      // jsxParseElement();
-      // next();
+    } else if (match(TokenType.lessThan) && true) {
+      state.type = TokenType.jsxTagStart;
+      jsxParseElement();
+      next();
       return false;
     }
 
@@ -5477,7 +6303,6 @@ const transform=(()=>{
       case TokenType.assign:
         retokenizeSlashAsRegex();
       // Fall through.
-
       case TokenType._super:
       case TokenType._this:
       case TokenType.regexp:
@@ -5490,7 +6315,6 @@ const transform=(()=>{
       case TokenType._false:
         next();
         return false;
-
       case TokenType._import:
         next();
         if (match(TokenType.dot)) {
@@ -5500,7 +6324,6 @@ const transform=(()=>{
           parseIdentifier();
         }
         return false;
-
       case TokenType.name: {
         const startTokenIndex = state.tokens.length;
         const functionStart = state.start;
@@ -5509,20 +6332,11 @@ const transform=(()=>{
         if (contextualKeyword === ContextualKeyword._await) {
           parseAwait();
           return false;
-        } else if (
-          contextualKeyword === ContextualKeyword._async &&
-          match(TokenType._function) &&
-          !canInsertSemicolon()
-        ) {
+        } else if (contextualKeyword === ContextualKeyword._async && match(TokenType._function) && !canInsertSemicolon()) {
           next();
           parseFunction(functionStart, false);
           return false;
-        } else if (
-          canBeArrow &&
-          contextualKeyword === ContextualKeyword._async &&
-          !canInsertSemicolon() &&
-          match(TokenType.name)
-        ) {
+        } else if (canBeArrow && contextualKeyword === ContextualKeyword._async && !canInsertSemicolon() && match(TokenType.name)) {
           state.scopeDepth++;
           parseBindingIdentifier(false);
           expect(TokenType.arrow);
@@ -5534,7 +6348,6 @@ const transform=(()=>{
           parseBlock();
           return false;
         }
-
         if (canBeArrow && !canInsertSemicolon() && match(TokenType.arrow)) {
           state.scopeDepth++;
           markPriorBindingIdentifier(false);
@@ -5542,57 +6355,45 @@ const transform=(()=>{
           parseArrowExpression(startTokenIndex);
           return true;
         }
-
         state.tokens[state.tokens.length - 1].identifierRole = IdentifierRole.Access;
         return false;
       }
-
       case TokenType._do: {
         next();
         parseBlock();
         return false;
       }
-
       case TokenType.parenL: {
         const wasArrow = parseParenAndDistinguishExpression(canBeArrow);
         return wasArrow;
       }
-
       case TokenType.bracketL:
         next();
         parseExprList(TokenType.bracketR, true);
         return false;
-
       case TokenType.braceL:
         parseObj(false, false);
         return false;
-
       case TokenType._function:
         parseFunctionExpression();
         return false;
-
       case TokenType.at:
         parseDecorators();
       // Fall through.
-
       case TokenType._class:
         parseClass(false);
         return false;
-
       case TokenType._new:
         parseNew();
         return false;
-
       case TokenType.backQuote:
         parseTemplate();
         return false;
-
       case TokenType.doubleColon: {
         next();
         parseNoCallExpr();
         return false;
       }
-
       case TokenType.hash: {
         const code = lookaheadCharCode();
         if (IS_IDENTIFIER_START[code] || code === charCodes.backslash) {
@@ -5603,7 +6404,6 @@ const transform=(()=>{
         // Smart pipeline topic reference.
         return false;
       }
-
       default:
         unexpected();
         return false;
@@ -5622,6 +6422,7 @@ const transform=(()=>{
       // function.sent
       parseIdentifier();
     }
+
     parseFunction(functionStart, false);
   }
 
@@ -5635,17 +6436,14 @@ const transform=(()=>{
     expect(TokenType.parenR);
   }
 
-// Returns true if this was an arrow expression.
+  // Returns true if this was an arrow expression.
   function parseParenAndDistinguishExpression(canBeArrow) {
     // Assume this is a normal parenthesized expression, but if we see an arrow, we'll bail and
     // start over as a parameter list.
     const snapshot = state.snapshot();
-
     const startTokenIndex = state.tokens.length;
     expect(TokenType.parenL);
-
     let first = true;
-
     while (!match(TokenType.parenR) && !state.error) {
       if (first) {
         first = false;
@@ -5655,9 +6453,11 @@ const transform=(()=>{
           break;
         }
       }
-
       if (match(TokenType.ellipsis)) {
-        parseRest(false /* isBlockScope */);
+        parseRest(
+          false
+          /* isBlockScope */
+        );
         parseParenItem();
         break;
       } else {
@@ -5666,7 +6466,6 @@ const transform=(()=>{
     }
 
     expect(TokenType.parenR);
-
     if (canBeArrow && shouldParseArrow()) {
       const wasArrow = parseArrow();
       if (wasArrow) {
@@ -5678,6 +6477,15 @@ const transform=(()=>{
         parseFunctionParams();
         parseArrow();
         parseArrowExpression(startTokenIndex);
+        if (state.error) {
+          // Nevermind! This must have been something that looks very much like an
+          // arrow function but where its "parameter list" isn't actually a valid
+          // parameter list. Force non-arrow parsing.
+          // See https://github.com/alangpierce/sucrase/issues/666 for an example.
+          state.restoreFromSnapshot(snapshot);
+          parseParenAndDistinguishExpression(false);
+          return false;
+        }
         return true;
       }
     }
@@ -5689,24 +6497,22 @@ const transform=(()=>{
     return match(TokenType.colon) || !canInsertSemicolon();
   }
 
-// Returns whether there was an arrow token.
+  // Returns whether there was an arrow token.
   function parseArrow() {
-    {
-      return tsParseArrow();
-    }
+    return tsParseArrow();
   }
 
   function parseParenItem() {
-    {
+    if (true || false) {
       typedParseParenItem();
     }
   }
 
-// New's precedence is slightly tricky. It must allow its argument to
-// be a `[]` or dot subscript expression, but not a call — at least,
-// not without wrapping it in parentheses. Thus, it uses the noCalls
-// argument to parseSubscripts to prevent it from consuming the
-// argument list.
+  // New's precedence is slightly tricky. It must allow its argument to
+  // be a `[]` or dot subscript expression, but not a call — at least,
+  // not without wrapping it in parentheses. Thus, it uses the noCalls
+  // argument to parseSubscripts to prevent it from consuming the
+  // argument list.
   function parseNew() {
     expect(TokenType._new);
     if (eat(TokenType.dot)) {
@@ -5714,18 +6520,16 @@ const transform=(()=>{
       parseIdentifier();
       return;
     }
-    parseNoCallExpr();
-    eat(TokenType.questionDot);
-    parseNewArguments();
-  }
 
-  function parseNewArguments() {
-    {
-      tsStartParseNewArguments();
-    }
+    parseNewCallee();
     if (eat(TokenType.parenL)) {
       parseExprList(TokenType.parenR);
     }
+  }
+
+  function parseNewCallee() {
+    parseNoCallExpr();
+    eat(TokenType.questionDot);
   }
 
   function parseTemplate() {
@@ -5741,18 +6545,17 @@ const transform=(()=>{
       // Finish quasi, read either ${ or `
       nextTemplateToken();
     }
+
     next();
   }
 
-// Parse an object literal or binding pattern.
+  // Parse an object literal or binding pattern.
   function parseObj(isPattern, isBlockScope) {
     // Attach a context ID to the object open and close brace and each object key.
     const contextId = getNextContextId();
     let first = true;
-
     next();
     state.tokens[state.tokens.length - 1].contextId = contextId;
-
     while (!eat(TokenType.braceR) && !state.error) {
       if (first) {
         first = false;
@@ -5762,7 +6565,6 @@ const transform=(()=>{
           break;
         }
       }
-
       let isGenerator = false;
       if (match(TokenType.ellipsis)) {
         const previousIndex = state.tokens.length;
@@ -5778,22 +6580,15 @@ const transform=(()=>{
         }
         continue;
       }
-
       if (!isPattern) {
         isGenerator = eat(TokenType.star);
       }
-
       if (!isPattern && isContextual(ContextualKeyword._async)) {
         if (isGenerator) unexpected();
-
         parseIdentifier();
-        if (
-          match(TokenType.colon) ||
-          match(TokenType.parenL) ||
-          match(TokenType.braceR) ||
-          match(TokenType.eq) ||
-          match(TokenType.comma)
-        ) ; else {
+        if (match(TokenType.colon) || match(TokenType.parenL) || match(TokenType.braceR) || match(TokenType.eq) || match(TokenType.comma)) {
+          // This is a key called "async" rather than an async function.
+        } else {
           if (match(TokenType.star)) {
             next();
             isGenerator = true;
@@ -5803,7 +6598,6 @@ const transform=(()=>{
       } else {
         parsePropertyName(contextId);
       }
-
       parseObjPropValue(isPattern, isBlockScope, contextId);
     }
 
@@ -5814,31 +6608,40 @@ const transform=(()=>{
     // We go off of the next and don't bother checking if the node key is actually "get" or "set".
     // This lets us avoid generating a node, and should only make the validation worse.
     return (
-      !isPattern &&
-      (match(TokenType.string) || // get "string"() {}
-        match(TokenType.num) || // get 1() {}
-        match(TokenType.bracketL) || // get ["string"]() {}
-        match(TokenType.name) || // get foo() {}
-        !!(state.type & TokenType.IS_KEYWORD)) // get debugger() {}
+      // get debugger() {}
+      (// get foo() {}
+      !isPattern && (match(TokenType.string) || // get "string"() {}
+      match(TokenType.num) || // get 1() {}
+      match(TokenType.bracketL) || // get ["string"]() {}
+      match(TokenType.name) || !!(state.type & TokenType.IS_KEYWORD)))
     );
   }
 
-// Returns true if this was a method.
+  // Returns true if this was a method.
   function parseObjectMethod(isPattern, objectContextId) {
     // We don't need to worry about modifiers because object methods can't have optional bodies, so
     // the start will never be used.
     const functionStart = state.start;
     if (match(TokenType.parenL)) {
       if (isPattern) unexpected();
-      parseMethod(functionStart, /* isConstructor */ false);
+      parseMethod(
+        functionStart,
+        /* isConstructor */
+        false
+      );
       return true;
     }
 
     if (isGetterOrSetterMethod(isPattern)) {
       parsePropertyName(objectContextId);
-      parseMethod(functionStart, /* isConstructor */ false);
+      parseMethod(
+        functionStart,
+        /* isConstructor */
+        false
+      );
       return true;
     }
+
     return false;
   }
 
@@ -5853,7 +6656,6 @@ const transform=(()=>{
     }
 
     // Since there's no colon, we assume this is an object shorthand.
-
     // If we're in a destructuring, we've now discovered that the key was actually an assignee, so
     // we need to tag it as a declaration with the appropriate scope. Otherwise, we might need to
     // transform it on access, so mark it as a normal object shorthand.
@@ -5869,21 +6671,15 @@ const transform=(()=>{
     } else {
       identifierRole = IdentifierRole.ObjectShorthand;
     }
-    state.tokens[state.tokens.length - 1].identifierRole = identifierRole;
 
+    state.tokens[state.tokens.length - 1].identifierRole = identifierRole;
     // Regardless of whether we know this to be a pattern or if we're in an ambiguous context, allow
     // parsing as if there's a default value.
     parseMaybeDefault(isBlockScope, true);
   }
 
-  function parseObjPropValue(
-    isPattern,
-    isBlockScope,
-    objectContextId,
-  ) {
-    {
-      tsStartParseObjPropValue();
-    }
+  function parseObjPropValue(isPattern, isBlockScope, objectContextId) {
+    tsStartParseObjPropValue();
     const wasMethod = parseObjectMethod(isPattern, objectContextId);
     if (!wasMethod) {
       parseObjectProperty(isPattern, isBlockScope);
@@ -5902,19 +6698,18 @@ const transform=(()=>{
       } else {
         parseMaybePrivateName();
       }
-
       state.tokens[state.tokens.length - 1].identifierRole = IdentifierRole.ObjectKey;
       state.tokens[state.tokens.length - 1].contextId = objectContextId;
     }
   }
 
-// Parse object or class method.
+  // Parse object or class method.
   function parseMethod(functionStart, isConstructor) {
     const funcContextId = getNextContextId();
-
     state.scopeDepth++;
     const startTokenIndex = state.tokens.length;
-    const allowModifiers = isConstructor; // For TypeScript parameter properties
+    const allowModifiers = isConstructor;
+    // For TypeScript parameter properties
     parseFunctionParams(allowModifiers, funcContextId);
     parseFunctionBodyAndFinish(functionStart, funcContextId);
     const endTokenIndex = state.tokens.length;
@@ -5922,9 +6717,9 @@ const transform=(()=>{
     state.scopeDepth--;
   }
 
-// Parse arrow function expression.
-// If the parameters are provided, they will be converted to an
-// assignable list.
+  // Parse arrow function expression.
+  // If the parameters are provided, they will be converted to an
+  // assignable list.
   function parseArrowExpression(startTokenIndex) {
     parseFunctionBody(true);
     const endTokenIndex = state.tokens.length;
@@ -5933,27 +6728,23 @@ const transform=(()=>{
   }
 
   function parseFunctionBodyAndFinish(functionStart, funcContextId = 0) {
-    {
-      tsParseFunctionBodyAndFinish(functionStart, funcContextId);
-    }
+    tsParseFunctionBodyAndFinish(functionStart, funcContextId);
   }
 
   function parseFunctionBody(allowExpression, funcContextId = 0) {
     const isExpression = allowExpression && !match(TokenType.braceL);
-
     if (isExpression) {
       parseMaybeAssign();
     } else {
-      parseBlock(true /* isFunctionScope */, funcContextId);
+      parseBlock(true, funcContextId);
     }
   }
 
-// Parses a comma-separated list of expressions, and returns them as
-// an array. `close` is the token type that ends the list, and
-// `allowEmpty` can be turned on to allow subsequent commas with
-// nothing in between them to be parsed as `null` (which is needed
-// for array literals).
-
+  // Parses a comma-separated list of expressions, and returns them as
+  // an array. `close` is the token type that ends the list, and
+  // `allowEmpty` can be turned on to allow subsequent commas with
+  // nothing in between them to be parsed as `null` (which is needed
+  // for array literals).
   function parseExprList(close, allowEmpty = false) {
     let first = true;
     while (!eat(close) && !state.error) {
@@ -5968,7 +6759,9 @@ const transform=(()=>{
   }
 
   function parseExprListItem(allowEmpty) {
-    if (allowEmpty && match(TokenType.comma)) ; else if (match(TokenType.ellipsis)) {
+    if (allowEmpty && match(TokenType.comma)) {
+      // Empty item; nothing more to parse for this item.
+    } else if (match(TokenType.ellipsis)) {
       parseSpread();
       parseParenItem();
     } else if (match(TokenType.question)) {
@@ -5979,18 +6772,18 @@ const transform=(()=>{
     }
   }
 
-// Parse the next token as an identifier.
+  // Parse the next token as an identifier.
   function parseIdentifier() {
     next();
     state.tokens[state.tokens.length - 1].type = TokenType.name;
   }
 
-// Parses await expression inside async function.
+  // Parses await expression inside async function.
   function parseAwait() {
     parseMaybeUnary();
   }
 
-// Parses yield expression inside generator.
+  // Parses yield expression inside generator.
   function parseYield() {
     next();
     if (!match(TokenType.semi) && !canInsertSemicolon()) {
@@ -5999,7 +6792,7 @@ const transform=(()=>{
     }
   }
 
-// https://github.com/tc39/proposal-js-module-blocks
+  // https://github.com/tc39/proposal-js-module-blocks
   function parseModuleExpression() {
     expectContextual(ContextualKeyword._module);
     expect(TokenType.braceL);
@@ -6009,45 +6802,79 @@ const transform=(()=>{
     parseBlockBody(TokenType.braceR);
   }
 
-  /* eslint max-len: 0 */
-  const isFlowEnabled=false;
+    /* eslint max-len: 0 */
+  // Interfaces
+  // The parsing of types roughly parallels the parsing of expressions, and
+  // primary types are kind of like primary expressions...they're the
+  // primitives with which other types are constructed.
+  // ==================================
+  // Overrides
+  // ==================================
+  // interfaces
+  // declares, interfaces and type aliases
+  // export type
+  function flowShouldParseExportDeclaration() {
+    return isContextual(ContextualKeyword._type) || isContextual(ContextualKeyword._interface) || isContextual(ContextualKeyword._opaque) || isContextual(ContextualKeyword._enum);
+  }
 
+  function flowShouldDisallowExportDefaultSpecifier() {
+    return match(TokenType.name) && (state.contextualKeyword === ContextualKeyword._type || state.contextualKeyword === ContextualKeyword._interface || state.contextualKeyword === ContextualKeyword._opaque || state.contextualKeyword === ContextualKeyword._enum);
+  }
+
+  // parse a the super class type parameters and implements
+  // parse type parameters for object method shorthand
+  // parse typeof and type imports
+  // parse import-type/typeof shorthand
+  // parse function type parameters - function foo<T>() {}
+  // parse flow type annotations on variable declarator heads - let foo: string = bar
+  // parse the return type of an async arrow function - let foo = (async (): number => {});
+  // We need to support type parameter declarations for arrow functions. This
+  // is tricky. There are three situations we need to handle
+  //
+  // 1. This is either JSX or an arrow function. We'll try JSX first. If that
+  //    fails, we'll try an arrow function. If that fails, we'll throw the JSX
+  //    error.
+  // 2. This is an arrow function. We'll parse the type parameter declaration,
+  //    parse the rest, make sure the rest is an arrow function, and go from
+  //    there
+  // 3. This is neither. Just call the super method
+  // handle return types for arrow functions
+  // Returns true if there was an arrow function here.
+
+    /* eslint max-len: 0 */
   function parseTopLevel() {
     parseBlockBody(TokenType.eof);
     state.scopes.push(new Scope(0, state.tokens.length, true));
     if (state.scopeDepth !== 0) {
       throw new Error(`Invalid scope depth at end of file: ${state.scopeDepth}`);
     }
+
     return new File(state.tokens, state.scopes);
   }
 
-// Parse a single statement.
-//
-// If expecting a statement and finding a slash operator, parse a
-// regular expression literal. This is to handle cases like
-// `if (foo) /blah/.exec(foo)`, where looking at the previous token
-// does not help.
-
+  // Parse a single statement.
+  //
+  // If expecting a statement and finding a slash operator, parse a
+  // regular expression literal. This is to handle cases like
+  // `if (foo) /blah/.exec(foo)`, where looking at the previous token
+  // does not help.
   function parseStatement(declaration) {
     if (match(TokenType.at)) {
       parseDecorators();
     }
+
     parseStatementContent(declaration);
   }
 
   function parseStatementContent(declaration) {
-    {
-      if (tsTryParseStatementContent()) {
-        return;
-      }
+    if (tsTryParseStatementContent()) {
+      return;
     }
 
     const starttype = state.type;
-
     // Most types of statements are recognized by the keyword they
     // start with. Many are trivial to parse, some require a bit of
     // complexity.
-
     switch (starttype) {
       case TokenType._break:
       case TokenType._continue:
@@ -6067,12 +6894,10 @@ const transform=(()=>{
         if (!declaration) unexpected();
         parseFunctionStatement();
         return;
-
       case TokenType._class:
         if (!declaration) unexpected();
         parseClass(true);
         return;
-
       case TokenType._if:
         parseIfStatement();
         return;
@@ -6088,15 +6913,13 @@ const transform=(()=>{
       case TokenType._try:
         parseTryStatement();
         return;
-
       case TokenType._let:
       case TokenType._const:
-        if (!declaration) unexpected(); // NOTE: falls through to _var
-
+        if (!declaration) unexpected();
+      // NOTE: falls through to _var
       case TokenType._var:
-        parseVarStatement(starttype);
+        parseVarStatement(starttype !== TokenType._var);
         return;
-
       case TokenType._while:
         parseWhileStatement();
         return;
@@ -6133,7 +6956,18 @@ const transform=(()=>{
           } else {
             state.restoreFromSnapshot(snapshot);
           }
+        } else if (state.contextualKeyword === ContextualKeyword._using && !hasFollowingLineBreak() && // Statements like `using[0]` and `using in foo` aren't actual using
+        // declarations.
+        lookaheadType() === TokenType.name) {
+          parseVarStatement(true);
+          return;
+        } else if (startsAwaitUsing()) {
+          expectContextual(ContextualKeyword._await);
+          parseVarStatement(true);
+          return;
         }
+      default:
+        break;
     }
 
     // If the statement does not start with a statement keyword or a
@@ -6150,16 +6984,63 @@ const transform=(()=>{
         simpleName = token.contextualKeyword;
       }
     }
+
     if (simpleName == null) {
       semicolon();
       return;
     }
+
     if (eat(TokenType.colon)) {
       parseLabeledStatement();
     } else {
       // This was an identifier, so we might want to handle flow/typescript-specific cases.
       parseIdentifierStatement(simpleName);
     }
+  }
+
+  /**
+   * Determine if we're positioned at an `await using` declaration.
+   *
+   * Note that this can happen either in place of a regular variable declaration
+   * or in a loop body, and in both places, there are similar-looking cases where
+   * we need to return false.
+   *
+   * Examples returning true:
+   * await using foo = bar();
+   * for (await using a of b) {}
+   *
+   * Examples returning false:
+   * await using
+   * await using + 1
+   * await using instanceof T
+   * for (await using;;) {}
+   *
+   * For now, we early return if we don't see `await`, then do a simple
+   * backtracking-based lookahead for the `using` and identifier tokens. In the
+   * future, this could be optimized with a character-based approach.
+   */
+  function startsAwaitUsing() {
+    if (!isContextual(ContextualKeyword._await)) {
+      return false;
+    }
+
+    const snapshot = state.snapshot();
+    // await
+    next();
+    if (!isContextual(ContextualKeyword._using) || hasPrecedingLineBreak()) {
+      state.restoreFromSnapshot(snapshot);
+      return false;
+    }
+
+    // using
+    next();
+    if (!match(TokenType.name) || hasPrecedingLineBreak()) {
+      state.restoreFromSnapshot(snapshot);
+      return false;
+    }
+
+    state.restoreFromSnapshot(snapshot);
+    return true;
   }
 
   function parseDecorators() {
@@ -6178,14 +7059,12 @@ const transform=(()=>{
       while (eat(TokenType.dot)) {
         parseIdentifier();
       }
+      parseMaybeDecoratorArguments();
     }
-    parseMaybeDecoratorArguments();
   }
 
   function parseMaybeDecoratorArguments() {
-    {
-      tsParseMaybeDecoratorArguments();
-    }
+    tsParseMaybeDecoratorArguments();
   }
 
   function baseParseMaybeDecoratorArguments() {
@@ -6224,23 +7103,41 @@ const transform=(()=>{
     state.scopeDepth--;
   }
 
-// Disambiguating between a `for` and a `for`/`in` or `for`/`of`
-// loop is non-trivial. Basically, we have to parse the init `var`
-// statement or expression, disallowing the `in` operator (see
-// the second parameter to `parseExpression`), and then check
-// whether the next token is `in` or `of`. When there is no init
-// part (semicolon immediately after the opening parenthesis), it
-// is a regular `for` loop.
+  /**
+   * Determine if this token is a `using` declaration (explicit resource
+   * management) as part of a loop.
+   * https://github.com/tc39/proposal-explicit-resource-management
+   */
+  function isUsingInLoop() {
+    if (!isContextual(ContextualKeyword._using)) {
+      return false;
+    }
+
+    // This must be `for (using of`, where `using` is the name of the loop
+    // variable.
+    if (isLookaheadContextual(ContextualKeyword._of)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  // Disambiguating between a `for` and a `for`/`in` or `for`/`of`
+  // loop is non-trivial. Basically, we have to parse the init `var`
+  // statement or expression, disallowing the `in` operator (see
+  // the second parameter to `parseExpression`), and then check
+  // whether the next token is `in` or `of`. When there is no init
+  // part (semicolon immediately after the opening parenthesis), it
+  // is a regular `for` loop.
   function parseAmbiguousForStatement() {
     next();
-
     let forAwait = false;
     if (isContextual(ContextualKeyword._await)) {
       forAwait = true;
       next();
     }
-    expect(TokenType.parenL);
 
+    expect(TokenType.parenL);
     if (match(TokenType.semi)) {
       if (forAwait) {
         unexpected();
@@ -6249,10 +7146,13 @@ const transform=(()=>{
       return;
     }
 
-    if (match(TokenType._var) || match(TokenType._let) || match(TokenType._const)) {
-      const varKind = state.type;
+    const isAwaitUsing = startsAwaitUsing();
+    if (isAwaitUsing || match(TokenType._var) || match(TokenType._let) || match(TokenType._const) || isUsingInLoop()) {
+      if (isAwaitUsing) {
+        expectContextual(ContextualKeyword._await);
+      }
       next();
-      parseVar(true, varKind);
+      parseVar(true, state.type !== TokenType._var);
       if (match(TokenType._in) || isContextual(ContextualKeyword._of)) {
         parseForIn(forAwait);
         return;
@@ -6266,9 +7166,11 @@ const transform=(()=>{
       parseForIn(forAwait);
       return;
     }
+
     if (forAwait) {
       unexpected();
     }
+
     parseFor();
   }
 
@@ -6289,11 +7191,9 @@ const transform=(()=>{
 
   function parseReturnStatement() {
     next();
-
     // In `return` (and `break`/`continue`), the keywords with
     // optional arguments, we eagerly look for a semicolon or the
     // possibility to insert one.
-
     if (!isLineTerminator()) {
       parseExpression();
       semicolon();
@@ -6306,7 +7206,6 @@ const transform=(()=>{
     state.scopeDepth++;
     const startTokenIndex = state.tokens.length;
     expect(TokenType.braceL);
-
     // Don't bother validation; just go through any sequence of cases, defaults, and statements.
     while (!match(TokenType.braceR) && !state.error) {
       if (match(TokenType._case) || match(TokenType._default)) {
@@ -6320,7 +7219,9 @@ const transform=(()=>{
         parseStatement(true);
       }
     }
-    next(); // Closing brace
+
+    next();
+    // Closing brace
     const endTokenIndex = state.tokens.length;
     state.scopes.push(new Scope(startTokenIndex, endTokenIndex, false));
     state.scopeDepth--;
@@ -6333,18 +7234,16 @@ const transform=(()=>{
   }
 
   function parseCatchClauseParam() {
-    parseBindingAtom(true /* isBlockScope */);
-
-    {
-      tsTryParseTypeAnnotation();
-    }
+    parseBindingAtom(
+      true
+      /* isBlockScope */
+    );
+    tsTryParseTypeAnnotation();
   }
 
   function parseTryStatement() {
     next();
-
     parseBlock();
-
     if (match(TokenType._catch)) {
       next();
       let catchBindingStartTokenIndex = null;
@@ -6364,14 +7263,15 @@ const transform=(()=>{
         state.scopeDepth--;
       }
     }
+
     if (eat(TokenType._finally)) {
       parseBlock();
     }
   }
 
-  function parseVarStatement(kind) {
+  function parseVarStatement(isBlockScope) {
     next();
-    parseVar(false, kind);
+    parseVar(false, isBlockScope);
     semicolon();
   }
 
@@ -6394,12 +7294,10 @@ const transform=(()=>{
    * to handle statements like "declare".
    */
   function parseIdentifierStatement(contextualKeyword) {
-    {
-      tsParseIdentifierStatement(contextualKeyword);
-    }
+    tsParseIdentifierStatement(contextualKeyword);
   }
 
-// Parse a semicolon-enclosed block of statements.
+  // Parse a semicolon-enclosed block of statements.
   function parseBlock(isFunctionScope = false, contextId = 0) {
     const startTokenIndex = state.tokens.length;
     state.scopeDepth++;
@@ -6407,10 +7305,12 @@ const transform=(()=>{
     if (contextId) {
       state.tokens[state.tokens.length - 1].contextId = contextId;
     }
+
     parseBlockBody(TokenType.braceR);
     if (contextId) {
       state.tokens[state.tokens.length - 1].contextId = contextId;
     }
+
     const endTokenIndex = state.tokens.length;
     state.scopes.push(new Scope(startTokenIndex, endTokenIndex, isFunctionScope));
     state.scopeDepth--;
@@ -6422,42 +7322,41 @@ const transform=(()=>{
     }
   }
 
-// Parse a regular `for` loop. The disambiguation code in
-// `parseStatement` will already have parsed the init statement or
-// expression.
-
+  // Parse a regular `for` loop. The disambiguation code in
+  // `parseStatement` will already have parsed the init statement or
+  // expression.
   function parseFor() {
     expect(TokenType.semi);
     if (!match(TokenType.semi)) {
       parseExpression();
     }
+
     expect(TokenType.semi);
     if (!match(TokenType.parenR)) {
       parseExpression();
     }
+
     expect(TokenType.parenR);
     parseStatement(false);
   }
 
-// Parse a `for`/`in` and `for`/`of` loop, which are almost
-// same from parser's perspective.
-
+  // Parse a `for`/`in` and `for`/`of` loop, which are almost
+  // same from parser's perspective.
   function parseForIn(forAwait) {
     if (forAwait) {
       eatContextual(ContextualKeyword._of);
     } else {
       next();
     }
+
     parseExpression();
     expect(TokenType.parenR);
     parseStatement(false);
   }
 
-// Parse a list of variable declarations.
-
-  function parseVar(isFor, kind) {
+  // Parse a list of variable declarations.
+  function parseVar(isFor, isBlockScope) {
     while (true) {
-      const isBlockScope = kind === TokenType._const || kind === TokenType._let;
       parseVarHead(isBlockScope);
       if (eat(TokenType.eq)) {
         const eqIndex = state.tokens.length - 1;
@@ -6472,19 +7371,12 @@ const transform=(()=>{
 
   function parseVarHead(isBlockScope) {
     parseBindingAtom(isBlockScope);
-    {
-      tsAfterParseVarHead();
-    }
+    tsAfterParseVarHead();
   }
 
-// Parse a function declaration or literal (depending on the
-// `isStatement` parameter).
-
-  function parseFunction(
-    functionStart,
-    isStatement,
-    optionalId = false,
-  ) {
+  // Parse a function declaration or literal (depending on the
+  // `isStatement` parameter).
+  function parseFunction(functionStart, isStatement, optionalId = false) {
     if (match(TokenType.star)) {
       next();
     }
@@ -6494,7 +7386,6 @@ const transform=(()=>{
     }
 
     let nameScopeStartTokenIndex = null;
-
     if (match(TokenType.name)) {
       // Expression-style functions should limit their name's scope to the function body, so we make
       // a new function scope to enforce that.
@@ -6520,38 +7411,31 @@ const transform=(()=>{
     }
   }
 
-  function parseFunctionParams(
-    allowModifiers = false,
-    funcContextId = 0,
-  ) {
-    {
-      tsStartParseFunctionParams();
-    }
-
+  function parseFunctionParams(allowModifiers = false, funcContextId = 0) {
+    tsStartParseFunctionParams();
     expect(TokenType.parenL);
     if (funcContextId) {
       state.tokens[state.tokens.length - 1].contextId = funcContextId;
     }
+
     parseBindingList(
       TokenType.parenR,
-      false /* isBlockScope */,
-      false /* allowEmpty */,
+      false,
+      false,
       allowModifiers,
-      funcContextId,
+      funcContextId
     );
     if (funcContextId) {
       state.tokens[state.tokens.length - 1].contextId = funcContextId;
     }
   }
 
-// Parse a class declaration or literal (depending on the
-// `isStatement` parameter).
-
+  // Parse a class declaration or literal (depending on the
+  // `isStatement` parameter).
   function parseClass(isStatement, optionalId = false) {
     // Put a context ID on the class keyword, the open-brace, and the close-brace, so that later
     // code can easily navigate to meaningful points on the class.
     const contextId = getNextContextId();
-
     next();
     state.tokens[state.tokens.length - 1].contextId = contextId;
     state.tokens[state.tokens.length - 1].isExpression = !isStatement;
@@ -6563,6 +7447,7 @@ const transform=(()=>{
       nameScopeStartTokenIndex = state.tokens.length;
       state.scopeDepth++;
     }
+
     parseClassId(isStatement, optionalId);
     parseClassSuper();
     const openBraceIndex = state.tokens.length;
@@ -6570,6 +7455,7 @@ const transform=(()=>{
     if (state.error) {
       return;
     }
+
     state.tokens[openBraceIndex].contextId = contextId;
     state.tokens[state.tokens.length - 1].contextId = contextId;
     if (nameScopeStartTokenIndex !== null) {
@@ -6589,12 +7475,10 @@ const transform=(()=>{
 
   function parseClassBody(classContextId) {
     expect(TokenType.braceL);
-
     while (!eat(TokenType.braceR) && !state.error) {
       if (eat(TokenType.semi)) {
         continue;
       }
-
       if (match(TokenType.at)) {
         parseDecorator();
         continue;
@@ -6605,20 +7489,23 @@ const transform=(()=>{
   }
 
   function parseClassMember(memberStart, classContextId) {
-    {
-      tsParseModifiers([
-        ContextualKeyword._declare,
-        ContextualKeyword._public,
-        ContextualKeyword._protected,
-        ContextualKeyword._private,
-        ContextualKeyword._override,
-      ]);
-    }
+    tsParseModifiers([
+      ContextualKeyword._declare,
+      ContextualKeyword._public,
+      ContextualKeyword._protected,
+      ContextualKeyword._private,
+      ContextualKeyword._override
+    ]);
     let isStatic = false;
     if (match(TokenType.name) && state.contextualKeyword === ContextualKeyword._static) {
-      parseIdentifier(); // eats 'static'
+      parseIdentifier();
+      // eats 'static'
       if (isClassMethod()) {
-        parseClassMethod(memberStart, /* isConstructor */ false);
+        parseClassMethod(
+          memberStart,
+          /* isConstructor */
+          false
+        );
         return;
       } else if (isClassProperty()) {
         parseClassProperty();
@@ -6627,7 +7514,6 @@ const transform=(()=>{
       // otherwise something static
       state.tokens[state.tokens.length - 1].type = TokenType._static;
       isStatic = true;
-
       if (match(TokenType.braceL)) {
         // This is a static block. Mark the word "static" with the class context ID for class element
         // detection and parse as a regular block.
@@ -6640,20 +7526,19 @@ const transform=(()=>{
     parseClassMemberWithIsStatic(memberStart, isStatic, classContextId);
   }
 
-  function parseClassMemberWithIsStatic(
-    memberStart,
-    isStatic,
-    classContextId,
-  ) {
-    {
-      if (tsTryParseClassMemberWithIsStatic(isStatic)) {
-        return;
-      }
+  function parseClassMemberWithIsStatic(memberStart, isStatic, classContextId) {
+    if (tsTryParseClassMemberWithIsStatic(isStatic)) {
+      return;
     }
+
     if (eat(TokenType.star)) {
       // a generator
       parseClassPropertyName(classContextId);
-      parseClassMethod(memberStart, /* isConstructor */ false);
+      parseClassMethod(
+        memberStart,
+        /* isConstructor */
+        false
+      );
       return;
     }
 
@@ -6666,8 +7551,8 @@ const transform=(()=>{
     if (token.contextualKeyword === ContextualKeyword._constructor) {
       isConstructor = true;
     }
-    parsePostMemberNameModifiers();
 
+    parsePostMemberNameModifiers();
     if (isClassMethod()) {
       parseClassMethod(memberStart, isConstructor);
     } else if (isClassProperty()) {
@@ -6679,16 +7564,15 @@ const transform=(()=>{
       if (isGenerator) {
         next();
       }
-
       // The so-called parsed name would have been "async": get the real name.
       parseClassPropertyName(classContextId);
       parsePostMemberNameModifiers();
-      parseClassMethod(memberStart, false /* isConstructor */);
-    } else if (
-      (token.contextualKeyword === ContextualKeyword._get ||
-        token.contextualKeyword === ContextualKeyword._set) &&
-      !(isLineTerminator() && match(TokenType.star))
-    ) {
+      parseClassMethod(
+        memberStart,
+        false
+        /* isConstructor */
+      );
+    } else if ((token.contextualKeyword === ContextualKeyword._get || token.contextualKeyword === ContextualKeyword._set) && !(isLineTerminator() && match(TokenType.star))) {
       if (token.contextualKeyword === ContextualKeyword._get) {
         state.tokens[state.tokens.length - 1].type = TokenType._get;
       } else {
@@ -6698,7 +7582,14 @@ const transform=(()=>{
       // a getter or setter
       // The so-called parsed name would have been "get/set": get the real name.
       parseClassPropertyName(classContextId);
-      parseClassMethod(memberStart, /* isConstructor */ false);
+      parseClassMethod(
+        memberStart,
+        /* isConstructor */
+        false
+      );
+    } else if (token.contextualKeyword === ContextualKeyword._accessor && !isLineTerminator()) {
+      parseClassPropertyName(classContextId);
+      parseClassProperty();
     } else if (isLineTerminator()) {
       // an uninitialized class property (due to ASI, since we don't otherwise recognize the next token)
       parseClassProperty();
@@ -6708,45 +7599,36 @@ const transform=(()=>{
   }
 
   function parseClassMethod(functionStart, isConstructor) {
-    {
-      tsTryParseTypeParameters();
-    }
+    tsTryParseTypeParameters();
     parseMethod(functionStart, isConstructor);
   }
 
-// Return the name of the class property, if it is a simple identifier.
+  // Return the name of the class property, if it is a simple identifier.
   function parseClassPropertyName(classContextId) {
     parsePropertyName(classContextId);
   }
 
   function parsePostMemberNameModifiers() {
-    {
-      const oldIsType = pushTypeContext(0);
-      eat(TokenType.question);
-      popTypeContext(oldIsType);
-    }
+    const oldIsType = pushTypeContext(0);
+    eat(TokenType.question);
+    popTypeContext(oldIsType);
   }
 
   function parseClassProperty() {
-    {
-      eatTypeToken(TokenType.bang);
-      tsTryParseTypeAnnotation();
-    }
-
+    eatTypeToken(TokenType.bang);
+    tsTryParseTypeAnnotation();
     if (match(TokenType.eq)) {
       const equalsTokenIndex = state.tokens.length;
       next();
       parseMaybeAssign();
       state.tokens[equalsTokenIndex].rhsEndIndex = state.tokens.length;
     }
+
     semicolon();
   }
 
   function parseClassId(isStatement, optionalId = false) {
-    if (
-      (!isStatement || optionalId) &&
-      isContextual(ContextualKeyword._implements)
-    ) {
+    if (true && (!isStatement || optionalId) && isContextual(ContextualKeyword._implements)) {
       return;
     }
 
@@ -6754,12 +7636,10 @@ const transform=(()=>{
       parseBindingIdentifier(true);
     }
 
-    {
-      tsTryParseTypeParameters();
-    }
+    tsTryParseTypeParameters();
   }
 
-// Returns true if there was a superclass.
+  // Returns true if there was a superclass.
   function parseClassSuper() {
     let hasSuper = false;
     if (eat(TokenType._extends)) {
@@ -6768,20 +7648,17 @@ const transform=(()=>{
     } else {
       hasSuper = false;
     }
-    {
-      tsAfterParseClassSuper(hasSuper);
-    }
+
+    tsAfterParseClassSuper(hasSuper);
   }
 
-// Parses module export declaration.
-
+  // Parses module export declaration.
   function parseExport() {
     const exportIndex = state.tokens.length - 1;
-    {
-      if (tsTryParseExport()) {
-        return;
-      }
+    if (tsTryParseExport()) {
+      return;
     }
+
     // export * from '...'
     if (shouldParseExportStar()) {
       parseExportStar();
@@ -6807,15 +7684,15 @@ const transform=(()=>{
       parseExportSpecifiers();
       parseExportFrom();
     }
+
     state.tokens[exportIndex].rhsEndIndex = state.tokens.length;
   }
 
   function parseExportDefaultExpression() {
-    {
-      if (tsTryParseExportDefaultExpression()) {
-        return;
-      }
+    if (tsTryParseExportDefaultExpression()) {
+      return;
     }
+
     const functionStart = state.start;
     if (eat(TokenType._function)) {
       parseFunction(functionStart, true, true);
@@ -6836,15 +7713,16 @@ const transform=(()=>{
   }
 
   function parseExportDeclaration() {
-    {
-      tsParseExportDeclaration();
-    }
+    tsParseExportDeclaration();
   }
 
   function isExportDefaultSpecifier() {
-    if (tsIsDeclarationStart()) {
+    if (true && tsIsDeclarationStart()) {
+      return false;
+    } else if (false && flowShouldDisallowExportDefaultSpecifier()) {
       return false;
     }
+
     if (match(TokenType.name)) {
       return state.contextualKeyword !== ContextualKeyword._async;
     }
@@ -6855,16 +7733,17 @@ const transform=(()=>{
 
     const _next = nextTokenStart();
     const lookahead = lookaheadTypeAndKeyword();
-    const hasFrom =
-      lookahead.type === TokenType.name && lookahead.contextualKeyword === ContextualKeyword._from;
+    const hasFrom = lookahead.type === TokenType.name && lookahead.contextualKeyword === ContextualKeyword._from;
     if (lookahead.type === TokenType.comma) {
       return true;
     }
+
     // lookahead again when `export default from` is seen
     if (hasFrom) {
       const nextAfterFrom = input.charCodeAt(nextTokenStartSince(_next + 4));
       return nextAfterFrom === charCodes.quotationMark || nextAfterFrom === charCodes.apostrophe;
     }
+
     return false;
   }
 
@@ -6877,25 +7756,22 @@ const transform=(()=>{
   function parseExportFrom() {
     if (eatContextual(ContextualKeyword._from)) {
       parseExprAtom();
+      maybeParseImportAttributes();
     }
+
     semicolon();
   }
 
   function shouldParseExportStar() {
-    {
-      return match(TokenType.star);
-    }
+    return match(TokenType.star);
   }
 
   function parseExportStar() {
-    {
-      baseParseExportStar();
-    }
+    baseParseExportStar();
   }
 
   function baseParseExportStar() {
     expect(TokenType.star);
-
     if (isContextual(ContextualKeyword._as)) {
       parseExportNamespace();
     } else {
@@ -6912,26 +7788,14 @@ const transform=(()=>{
   }
 
   function shouldParseExportDeclaration() {
-    return (
-      (tsIsDeclarationStart()) ||
-      (isFlowEnabled ) ||
-      state.type === TokenType._var ||
-      state.type === TokenType._const ||
-      state.type === TokenType._let ||
-      state.type === TokenType._function ||
-      state.type === TokenType._class ||
-      isContextual(ContextualKeyword._async) ||
-      match(TokenType.at)
-    );
+    return true && tsIsDeclarationStart() || false && flowShouldParseExportDeclaration() || state.type === TokenType._var || state.type === TokenType._const || state.type === TokenType._let || state.type === TokenType._function || state.type === TokenType._class || isContextual(ContextualKeyword._async) || match(TokenType.at);
   }
 
-// Parses a comma-separated list of module exports.
+  // Parses a comma-separated list of module exports.
   function parseExportSpecifiers() {
     let first = true;
-
     // export { x, y as z } [from '...']
     expect(TokenType.braceL);
-
     while (!eat(TokenType.braceR) && !state.error) {
       if (first) {
         first = false;
@@ -6941,25 +7805,74 @@ const transform=(()=>{
           break;
         }
       }
-
-      parseIdentifier();
-      state.tokens[state.tokens.length - 1].identifierRole = IdentifierRole.ExportAccess;
-      if (eatContextual(ContextualKeyword._as)) {
-        parseIdentifier();
-      }
+      parseExportSpecifier();
     }
   }
 
-// Parses import declaration.
+  function parseExportSpecifier() {
+    tsParseExportSpecifier();
+    return;
+    parseIdentifier();
+    state.tokens[state.tokens.length - 1].identifierRole = IdentifierRole.ExportAccess;
+    if (eatContextual(ContextualKeyword._as)) {
+      parseIdentifier();
+    }
+  }
 
+  /**
+   * Starting at the `module` token in an import, determine if it was truly an
+   * import reflection token or just looks like one.
+   *
+   * Returns true for:
+   * import module foo from "foo";
+   * import module from from "foo";
+   *
+   * Returns false for:
+   * import module from "foo";
+   * import module, {bar} from "foo";
+   */
+  function isImportReflection() {
+    const snapshot = state.snapshot();
+    expectContextual(ContextualKeyword._module);
+    if (eatContextual(ContextualKeyword._from)) {
+      if (isContextual(ContextualKeyword._from)) {
+        state.restoreFromSnapshot(snapshot);
+        return true;
+      } else {
+        state.restoreFromSnapshot(snapshot);
+        return false;
+      }
+    } else if (match(TokenType.comma)) {
+      state.restoreFromSnapshot(snapshot);
+      return false;
+    } else {
+      state.restoreFromSnapshot(snapshot);
+      return true;
+    }
+  }
+
+  /**
+   * Eat the "module" token from the import reflection proposal.
+   * https://github.com/tc39/proposal-import-reflection
+   */
+  function parseMaybeImportReflection() {
+    // isImportReflection does snapshot/restore, so only run it if we see the word
+    // "module".
+    if (isContextual(ContextualKeyword._module) && isImportReflection()) {
+      next();
+    }
+  }
+
+  // Parses import declaration.
   function parseImport() {
-    if (match(TokenType.name) && lookaheadType() === TokenType.eq) {
+    if (true && match(TokenType.name) && lookaheadType() === TokenType.eq) {
       tsParseImportEqualsDeclaration();
       return;
     }
-    if (isContextual(ContextualKeyword._type)) {
-      const lookahead = lookaheadType();
-      if (lookahead === TokenType.name) {
+
+    if (true && isContextual(ContextualKeyword._type)) {
+      const lookahead = lookaheadTypeAndKeyword();
+      if (lookahead.type === TokenType.name && lookahead.contextualKeyword !== ContextualKeyword._from) {
         // One of these `import type` cases:
         // import type T = require('T');
         // import type A from 'A';
@@ -6970,7 +7883,7 @@ const transform=(()=>{
         }
         // If this is an `import type...from` statement, then we already ate the
         // type token, so proceed to the regular import parser.
-      } else if (lookahead === TokenType.star || lookahead === TokenType.braceL) {
+      } else if (lookahead.type === TokenType.star || lookahead.type === TokenType.braceL) {
         // One of these `import type` cases, in which case we can eat the type token
         // and proceed as normal:
         // import type * as A from 'A';
@@ -6984,14 +7897,17 @@ const transform=(()=>{
     if (match(TokenType.string)) {
       parseExprAtom();
     } else {
+      parseMaybeImportReflection();
       parseImportSpecifiers();
       expectContextual(ContextualKeyword._from);
       parseExprAtom();
     }
+
+    maybeParseImportAttributes();
     semicolon();
   }
 
-// eslint-disable-next-line no-unused-vars
+  // eslint-disable-next-line no-unused-vars
   function shouldParseDefaultImport() {
     return match(TokenType.name);
   }
@@ -7000,23 +7916,19 @@ const transform=(()=>{
     parseImportedIdentifier();
   }
 
-// Parses a comma-separated list of module imports.
+  // Parses a comma-separated list of module imports.
   function parseImportSpecifiers() {
-
     let first = true;
     if (shouldParseDefaultImport()) {
       // import defaultObj, { x, y as z } from '...'
       parseImportSpecifierLocal();
-
       if (!eat(TokenType.comma)) return;
     }
 
     if (match(TokenType.star)) {
       next();
       expectContextual(ContextualKeyword._as);
-
       parseImportSpecifierLocal();
-
       return;
     }
 
@@ -7028,21 +7940,21 @@ const transform=(()=>{
         // Detect an attempt to deep destructure
         if (eat(TokenType.colon)) {
           unexpected(
-            "ES2015 named imports do not destructure. Use another statement for destructuring after the import.",
+            "ES2015 named imports do not destructure. Use another statement for destructuring after the import."
           );
         }
-
         expect(TokenType.comma);
         if (eat(TokenType.braceR)) {
           break;
         }
       }
-
       parseImportSpecifier();
     }
   }
 
   function parseImportSpecifier() {
+    tsParseImportSpecifier();
+    return;
     parseImportedIdentifier();
     if (isContextual(ContextualKeyword._as)) {
       state.tokens[state.tokens.length - 1].identifierRole = IdentifierRole.ImportAccess;
@@ -7051,45 +7963,51 @@ const transform=(()=>{
     }
   }
 
-  function parseFile() {
+  /**
+   * Parse import attributes like `with {type: "json"}`, or the legacy form
+   * `assert {type: "json"}`.
+   *
+   * Import attributes technically have their own syntax, but are always parseable
+   * as a plain JS object, so just do that for simplicity.
+   */
+  function maybeParseImportAttributes() {
+    if (match(TokenType._with) || isContextual(ContextualKeyword._assert) && !hasPrecedingLineBreak()) {
+      next();
+      parseObj(false, false);
+    }
+  }
+
+    function parseFile() {
     // If enabled, skip leading hashbang line.
-    if (
-      state.pos === 0 &&
-      input.charCodeAt(0) === charCodes.numberSign &&
-      input.charCodeAt(1) === charCodes.exclamationMark
-    ) {
+    if (state.pos === 0 && input.charCodeAt(0) === charCodes.numberSign && input.charCodeAt(1) === charCodes.exclamationMark) {
       skipLineComment(2);
     }
+
     nextToken();
     return parseTopLevel();
   }
 
-  class File {
-
-
-
+    class File {
     constructor(tokens, scopes) {
       this.tokens = tokens;
       this.scopes = scopes;
     }
-  }
+  };
+  function parse(input2, isJSXEnabled2, isTypeScriptEnabled2, isFlowEnabled2) {
+    if (isFlowEnabled2 && isTypeScriptEnabled2) {
+      throw new Error("Cannot combine flow and typescript plugins.");
+    }
 
-  function parse(
-    input,
-    isJSXEnabled,
-    isTypeScriptEnabled,
-    isFlowEnabled,
-  ) {
-
-    initParser(input);
+    initParser(input2, isJSXEnabled2, isTypeScriptEnabled2, isFlowEnabled2);
     const result = parseFile();
     if (state.error) {
       throw augmentError(state.error);
     }
+
     return result;
   }
 
-  /**
+    /**
    * Determine whether this optional chain or nullish coalescing operation has any await statements in
    * it. If so, we'll need to transpile to an async operation.
    *
@@ -7112,12 +8030,7 @@ const transform=(()=>{
       }
       depth += token.numNullishCoalesceStarts;
       depth -= token.numNullishCoalesceEnds;
-
-      if (
-        token.contextualKeyword === ContextualKeyword._await &&
-        token.identifierRole == null &&
-        token.scopeDepth === startToken.scopeDepth
-      ) {
+      if (token.contextualKeyword === ContextualKeyword._await && token.identifierRole == null && token.scopeDepth === startToken.scopeDepth) {
         return true;
       }
       index += 1;
@@ -7125,29 +8038,45 @@ const transform=(()=>{
     return false;
   }
 
-  const disableESTransforms = true;
+    class TokenProcessor {
+    __init() {
+      this.resultCode = "";
+    }
 
+    // Array mapping input token index to optional string index position in the
+    // output code.
+    __init2() {
+      this.resultMappings = new Array(this.tokens.length);
+    }
 
-  class TokenProcessor {
-    __init() {this.resultCode = "";}
-    __init2() {this.tokenIndex = 0;}
+    __init3() {
+      this.tokenIndex = 0;
+    }
 
-    constructor(
-      code,
-      tokens,
-      isFlowEnabled,
-      disableESTransforms,
-      helperManager,
-    ) {this.code = code;this.tokens = tokens;
-      this.isFlowEnabled = false;
+    constructor(code, tokens, isFlowEnabled2, disableESTransforms, helperManager) {
+      ;
+      this.code = code;
+      this.tokens = tokens;
+      this.isFlowEnabled = isFlowEnabled2;
       this.disableESTransforms = true;
-      this.helperManager = helperManager;TokenProcessor.prototype.__init.call(this);TokenProcessor.prototype.__init2.call(this);}
+      this.helperManager = helperManager;
+      TokenProcessor.prototype.__init.call(this);
+      TokenProcessor.prototype.__init2.call(this);
+      TokenProcessor.prototype.__init3.call(this);
+    }
 
     /**
-     * Make a new TokenProcessor for things like lookahead.
+     * Snapshot the token state in a way that can be restored later, useful for
+     * things like lookahead.
+     *
+     * resultMappings do not need to be copied since in all use cases, they will
+     * be overwritten anyway after restore.
      */
     snapshot() {
-      return {resultCode: this.resultCode, tokenIndex: this.tokenIndex};
+      return {
+        resultCode: this.resultCode,
+        tokenIndex: this.tokenIndex
+      };
     }
 
     restoreToSnapshot(snapshot) {
@@ -7155,26 +8084,37 @@ const transform=(()=>{
       this.tokenIndex = snapshot.tokenIndex;
     }
 
-    getResultCodeIndex() {
-      return this.resultCode.length;
+    /**
+     * Remove and return the code generated since the snapshot, leaving the
+     * current token position in-place. Unlike most TokenProcessor operations,
+     * this operation can result in input/output line number mismatches because
+     * the removed code may contain newlines, so this operation should be used
+     * sparingly.
+     */
+    dangerouslyGetAndRemoveCodeSinceSnapshot(snapshot) {
+      const result = this.resultCode.slice(snapshot.resultCode.length);
+      this.resultCode = snapshot.resultCode;
+      return result;
     }
 
     reset() {
       this.resultCode = "";
+      this.resultMappings = new Array(this.tokens.length);
       this.tokenIndex = 0;
     }
 
     matchesContextualAtIndex(index, contextualKeyword) {
-      return (
-        this.matches1AtIndex(index, TokenType.name) &&
-        this.tokens[index].contextualKeyword === contextualKeyword
-      );
+      return this.matches1AtIndex(index, TokenType.name) && this.tokens[index].contextualKeyword === contextualKeyword;
     }
 
     identifierNameAtIndex(index) {
       // TODO: We need to process escapes since technically you can have unicode escapes in variable
       // names.
       return this.identifierNameForToken(this.tokens[index]);
+    }
+
+    identifierNameAtRelativeIndex(relativeIndex) {
+      return this.identifierNameForToken(this.tokenAtRelativeIndex(relativeIndex));
     }
 
     identifierName() {
@@ -7213,11 +8153,7 @@ const transform=(()=>{
     }
 
     matches3AtIndex(index, t1, t2, t3) {
-      return (
-        this.tokens[index].type === t1 &&
-        this.tokens[index + 1].type === t2 &&
-        this.tokens[index + 2].type === t3
-      );
+      return this.tokens[index].type === t1 && this.tokens[index + 1].type === t2 && this.tokens[index + 2].type === t3;
     }
 
     matches1(t1) {
@@ -7229,30 +8165,15 @@ const transform=(()=>{
     }
 
     matches3(t1, t2, t3) {
-      return (
-        this.tokens[this.tokenIndex].type === t1 &&
-        this.tokens[this.tokenIndex + 1].type === t2 &&
-        this.tokens[this.tokenIndex + 2].type === t3
-      );
+      return this.tokens[this.tokenIndex].type === t1 && this.tokens[this.tokenIndex + 1].type === t2 && this.tokens[this.tokenIndex + 2].type === t3;
     }
 
     matches4(t1, t2, t3, t4) {
-      return (
-        this.tokens[this.tokenIndex].type === t1 &&
-        this.tokens[this.tokenIndex + 1].type === t2 &&
-        this.tokens[this.tokenIndex + 2].type === t3 &&
-        this.tokens[this.tokenIndex + 3].type === t4
-      );
+      return this.tokens[this.tokenIndex].type === t1 && this.tokens[this.tokenIndex + 1].type === t2 && this.tokens[this.tokenIndex + 2].type === t3 && this.tokens[this.tokenIndex + 3].type === t4;
     }
 
     matches5(t1, t2, t3, t4, t5) {
-      return (
-        this.tokens[this.tokenIndex].type === t1 &&
-        this.tokens[this.tokenIndex + 1].type === t2 &&
-        this.tokens[this.tokenIndex + 2].type === t3 &&
-        this.tokens[this.tokenIndex + 3].type === t4 &&
-        this.tokens[this.tokenIndex + 4].type === t5
-      );
+      return this.tokens[this.tokenIndex].type === t1 && this.tokens[this.tokenIndex + 1].type === t2 && this.tokens[this.tokenIndex + 2].type === t3 && this.tokens[this.tokenIndex + 3].type === t4 && this.tokens[this.tokenIndex + 4].type === t5;
     }
 
     matchesContextual(contextualKeyword) {
@@ -7266,14 +8187,18 @@ const transform=(()=>{
     previousWhitespaceAndComments() {
       let whitespaceAndComments = this.code.slice(
         this.tokenIndex > 0 ? this.tokens[this.tokenIndex - 1].end : 0,
-        this.tokenIndex < this.tokens.length ? this.tokens[this.tokenIndex].start : this.code.length,
+        this.tokenIndex < this.tokens.length ? this.tokens[this.tokenIndex].start : this.code.length
       );
+      if (this.isFlowEnabled) {
+        whitespaceAndComments = whitespaceAndComments.replace(/@flow/g, "");
+      }
       return whitespaceAndComments;
     }
 
     replaceToken(newCode) {
       this.resultCode += this.previousWhitespaceAndComments();
       this.appendTokenPrefix();
+      this.resultMappings[this.tokenIndex] = this.resultCode.length;
       this.resultCode += newCode;
       this.appendTokenSuffix();
       this.tokenIndex++;
@@ -7282,6 +8207,7 @@ const transform=(()=>{
     replaceTokenTrimmingLeftWhitespace(newCode) {
       this.resultCode += this.previousWhitespaceAndComments().replace(/[^\r\n]/g, "");
       this.appendTokenPrefix();
+      this.resultMappings[this.tokenIndex] = this.resultCode.length;
       this.resultCode += newCode;
       this.appendTokenSuffix();
       this.tokenIndex++;
@@ -7295,6 +8221,24 @@ const transform=(()=>{
       this.replaceTokenTrimmingLeftWhitespace("");
     }
 
+    /**
+     * Remove all code until the next }, accounting for balanced braces.
+     */
+    removeBalancedCode() {
+      let braceDepth = 0;
+      while (!this.isAtEnd()) {
+        if (this.matches1(TokenType.braceL)) {
+          braceDepth++;
+        } else if (this.matches1(TokenType.braceR)) {
+          if (braceDepth === 0) {
+            return;
+          }
+          braceDepth--;
+        }
+        this.removeToken();
+      }
+    }
+
     copyExpectedToken(tokenType) {
       if (this.tokens[this.tokenIndex].type !== tokenType) {
         throw new Error(`Expected token ${tokenType}`);
@@ -7305,9 +8249,10 @@ const transform=(()=>{
     copyToken() {
       this.resultCode += this.previousWhitespaceAndComments();
       this.appendTokenPrefix();
+      this.resultMappings[this.tokenIndex] = this.resultCode.length;
       this.resultCode += this.code.slice(
         this.tokens[this.tokenIndex].start,
-        this.tokens[this.tokenIndex].end,
+        this.tokens[this.tokenIndex].end
       );
       this.appendTokenSuffix();
       this.tokenIndex++;
@@ -7317,9 +8262,10 @@ const transform=(()=>{
       this.resultCode += this.previousWhitespaceAndComments();
       this.appendTokenPrefix();
       this.resultCode += prefix;
+      this.resultMappings[this.tokenIndex] = this.resultCode.length;
       this.resultCode += this.code.slice(
         this.tokens[this.tokenIndex].start,
-        this.tokens[this.tokenIndex].end,
+        this.tokens[this.tokenIndex].end
       );
       this.appendTokenSuffix();
       this.tokenIndex++;
@@ -7330,17 +8276,45 @@ const transform=(()=>{
       if (token.numNullishCoalesceStarts || token.isOptionalChainStart) {
         token.isAsyncOperation = isAsyncOperation(this);
       }
-      {
+      if (this.disableESTransforms) {
         return;
+      }
+      if (token.numNullishCoalesceStarts) {
+        for (let i = 0; i < token.numNullishCoalesceStarts; i++) {
+          if (token.isAsyncOperation) {
+            this.resultCode += "await ";
+            this.resultCode += this.helperManager.getHelperName("asyncNullishCoalesce");
+          } else {
+            this.resultCode += this.helperManager.getHelperName("nullishCoalesce");
+          }
+          this.resultCode += "(";
+        }
+      }
+      if (token.isOptionalChainStart) {
+        if (token.isAsyncOperation) {
+          this.resultCode += "await ";
+        }
+        if (this.tokenIndex > 0 && this.tokenAtRelativeIndex(-1).type === TokenType._delete) {
+          if (token.isAsyncOperation) {
+            this.resultCode += this.helperManager.getHelperName("asyncOptionalChainDelete");
+          } else {
+            this.resultCode += this.helperManager.getHelperName("optionalChainDelete");
+          }
+        } else if (token.isAsyncOperation) {
+          this.resultCode += this.helperManager.getHelperName("asyncOptionalChain");
+        } else {
+          this.resultCode += this.helperManager.getHelperName("optionalChain");
+        }
+        this.resultCode += "([";
       }
     }
 
     appendTokenSuffix() {
       const token = this.currentToken();
-      if (token.isOptionalChainEnd && !disableESTransforms) {
+      if (token.isOptionalChainEnd && !this.disableESTransforms) {
         this.resultCode += "])";
       }
-      if (token.numNullishCoalesceEnds && !disableESTransforms) {
+      if (token.numNullishCoalesceEnds && !this.disableESTransforms) {
         for (let i = 0; i < token.numNullishCoalesceEnds; i++) {
           this.resultCode += "))";
         }
@@ -7388,35 +8362,27 @@ const transform=(()=>{
         throw new Error("Tried to finish processing tokens before reaching the end.");
       }
       this.resultCode += this.previousWhitespaceAndComments();
-      return this.resultCode;
+      return { code: this.resultCode, mappings: this.resultMappings };
     }
 
     isAtEnd() {
       return this.tokenIndex === this.tokens.length;
     }
-  }
+  };
 
-  /**
+    /**
    * Get information about the class fields for this class, given a token processor pointing to the
    * open-brace at the start of the class.
    */
-  function getClassInfo(
-    rootTransformer,
-    tokens,
-    nameManager,
-    disableESTransforms_,
-  ) {
+  function getClassInfo(rootTransformer, tokens, nameManager, disableESTransforms) {
     const snapshot = tokens.snapshot();
-
     const headerInfo = processClassHeader(tokens);
-
     let constructorInitializerStatements = [];
     const instanceInitializerNames = [];
     const staticInitializerNames = [];
     let constructorInsertPos = null;
     const fields = [];
     const rangesToRemove = [];
-
     const classContextId = tokens.currentToken().contextId;
     if (classContextId == null) {
       throw new Error("Expected non-null class context ID on class open-brace.");
@@ -7425,8 +8391,11 @@ const transform=(()=>{
     tokens.nextToken();
     while (!tokens.matchesContextIdAndLabel(TokenType.braceR, classContextId)) {
       if (tokens.matchesContextual(ContextualKeyword._constructor) && !tokens.currentToken().isType) {
-        ({constructorInitializerStatements, constructorInsertPos} = processConstructor(tokens));
+        ({ constructorInitializerStatements, constructorInsertPos } = processConstructor(tokens));
       } else if (tokens.matches1(TokenType.semi)) {
+        if (!true) {
+          rangesToRemove.push({ start: tokens.currentIndex(), end: tokens.currentIndex() + 1 });
+        }
         tokens.nextToken();
       } else if (tokens.currentToken().isType) {
         tokens.nextToken();
@@ -7435,7 +8404,7 @@ const transform=(()=>{
         const statementStartIndex = tokens.currentIndex();
         let isStatic = false;
         let isESPrivate = false;
-        let isDeclare = false;
+        let isDeclareOrAbstract = false;
         while (isAccessModifier(tokens.currentToken())) {
           if (tokens.matches1(TokenType._static)) {
             isStatic = true;
@@ -7443,8 +8412,8 @@ const transform=(()=>{
           if (tokens.matches1(TokenType.hash)) {
             isESPrivate = true;
           }
-          if (tokens.matches1(TokenType._declare)) {
-            isDeclare = true;
+          if (tokens.matches1(TokenType._declare) || tokens.matches1(TokenType._abstract)) {
+            isDeclareOrAbstract = true;
           }
           tokens.nextToken();
         }
@@ -7458,14 +8427,10 @@ const transform=(()=>{
           skipToNextClassElement(tokens, classContextId);
           continue;
         }
-        if (
-          tokens.matchesContextual(ContextualKeyword._constructor) &&
-          !tokens.currentToken().isType
-        ) {
-          ({constructorInitializerStatements, constructorInsertPos} = processConstructor(tokens));
+        if (tokens.matchesContextual(ContextualKeyword._constructor) && !tokens.currentToken().isType) {
+          ({ constructorInitializerStatements, constructorInsertPos } = processConstructor(tokens));
           continue;
         }
-
         const nameStartIndex = tokens.currentIndex();
         skipFieldName(tokens);
         if (tokens.matches1(TokenType.lessThan) || tokens.matches1(TokenType.parenL)) {
@@ -7501,39 +8466,37 @@ const transform=(()=>{
             initializerName,
             equalsIndex,
             start: nameStartIndex,
-            end: tokens.currentIndex(),
+            end: tokens.currentIndex()
           });
-        } else if (isDeclare) {
+        } else if (!true || isDeclareOrAbstract) {
           // This is a regular field declaration, like `x;`. With the class transform enabled, we just
           // remove the line so that no output is produced. With the class transform disabled, we
           // usually want to preserve the declaration (but still strip types), but if the `declare`
-          // keyword is specified, we should remove the line to avoid initializing the value to
-          // undefined.
-          rangesToRemove.push({start: statementStartIndex, end: tokens.currentIndex()});
+          // or `abstract` keyword is specified, we should remove the line to avoid initializing the
+          // value to undefined.
+          rangesToRemove.push({ start: statementStartIndex, end: tokens.currentIndex() });
         }
       }
     }
 
     tokens.restoreToSnapshot(snapshot);
-    {
-      // With ES transforms disabled, we don't want to transform regular class
-      // field declarations, and we don't need to do any additional tricks to
-      // reference the constructor for static init, but we still need to transform
-      // TypeScript field initializers defined as constructor parameters and we
-      // still need to remove `declare` fields. For now, we run the same code
-      // path but omit any field information, as if the class had no field
-      // declarations. In the future, when we fully drop the class fields
-      // transform, we can simplify this code significantly.
-      return {
-        headerInfo,
-        constructorInitializerStatements,
-        instanceInitializerNames: [],
-        staticInitializerNames: [],
-        constructorInsertPos,
-        fields: [],
-        rangesToRemove,
-      };
-    }
+    // With ES transforms disabled, we don't want to transform regular class
+    // field declarations, and we don't need to do any additional tricks to
+    // reference the constructor for static init, but we still need to transform
+    // TypeScript field initializers defined as constructor parameters and we
+    // still need to remove `declare` fields. For now, we run the same code
+    // path but omit any field information, as if the class had no field
+    // declarations. In the future, when we fully drop the class fields
+    // transform, we can simplify this code significantly.
+    return {
+      headerInfo,
+      constructorInitializerStatements,
+      instanceInitializerNames: [],
+      staticInitializerNames: [],
+      constructorInsertPos,
+      fields: [],
+      rangesToRemove
+    };
   }
 
   /**
@@ -7548,6 +8511,7 @@ const transform=(()=>{
     while (tokens.currentToken().contextId !== classContextId) {
       tokens.nextToken();
     }
+
     while (isAccessModifier(tokens.tokenAtRelativeIndex(-1))) {
       tokens.previousToken();
     }
@@ -7559,16 +8523,19 @@ const transform=(()=>{
     if (contextId == null) {
       throw new Error("Expected context ID on class token.");
     }
+
     const isExpression = classToken.isExpression;
     if (isExpression == null) {
       throw new Error("Expected isExpression on class token.");
     }
+
     let className = null;
     let hasSuperclass = false;
     tokens.nextToken();
     if (tokens.matches1(TokenType.name)) {
       className = tokens.identifierName();
     }
+
     while (!tokens.matchesContextIdAndLabel(TokenType.braceL, contextId)) {
       // If this has a superclass, there will always be an `extends` token. If it doesn't have a
       // superclass, only type parameters and `implements` clauses can show up here, all of which
@@ -7579,23 +8546,21 @@ const transform=(()=>{
       }
       tokens.nextToken();
     }
-    return {isExpression, className, hasSuperclass};
+
+    return { isExpression, className, hasSuperclass };
   }
 
   /**
    * Extract useful information out of a constructor, starting at the "constructor" name.
    */
-  function processConstructor(tokens)
-
-
-  {
+  function processConstructor(tokens) {
     const constructorInitializerStatements = [];
-
     tokens.nextToken();
     const constructorContextId = tokens.currentToken().contextId;
     if (constructorContextId == null) {
       throw new Error("Expected context ID on open-paren starting constructor params.");
     }
+
     // Advance through parameters looking for access modifiers.
     while (!tokens.matchesContextIdAndLabel(TokenType.parenR, constructorContextId)) {
       if (tokens.currentToken().contextId === constructorContextId) {
@@ -7618,10 +8583,16 @@ const transform=(()=>{
         tokens.nextToken();
       }
     }
+
     // )
     tokens.nextToken();
-    let constructorInsertPos = tokens.currentIndex();
+    // Constructor type annotations are invalid, but skip them anyway since
+    // they're easy to skip.
+    while (tokens.currentToken().isType) {
+      tokens.nextToken();
+    }
 
+    let constructorInsertPos = tokens.currentIndex();
     // Advance through body looking for a super call.
     let foundSuperCall = false;
     while (!tokens.matchesContextIdAndLabel(TokenType.braceR, constructorContextId)) {
@@ -7639,10 +8610,10 @@ const transform=(()=>{
       }
       tokens.nextToken();
     }
+
     // }
     tokens.nextToken();
-
-    return {constructorInitializerStatements, constructorInsertPos};
+    return { constructorInitializerStatements, constructorInsertPos };
   }
 
   /**
@@ -7664,7 +8635,7 @@ const transform=(()=>{
       TokenType._abstract,
       TokenType.star,
       TokenType._declare,
-      TokenType.hash,
+      TokenType.hash
     ].includes(token.type);
   }
 
@@ -7688,7 +8659,7 @@ const transform=(()=>{
     }
   }
 
-  function elideImportEquals(tokens) {
+    function elideImportEquals(tokens) {
     // import
     tokens.removeInitialToken();
     // name
@@ -7715,11 +8686,10 @@ const transform=(()=>{
     }
   }
 
-  const EMPTY_DECLARATION_INFO = {
-    typeDeclarations: new Set(),
-    valueDeclarations: new Set(),
+    var EMPTY_DECLARATION_INFO = {
+    typeDeclarations: /* @__PURE__ */ new Set(),
+    valueDeclarations: /* @__PURE__ */ new Set()
   };
-
   /**
    * Get all top-level identifiers that should be preserved when exported in TypeScript.
    *
@@ -7732,8 +8702,8 @@ const transform=(()=>{
    *   rule them out. --isolatedModules disallows re-exports, which catches errors here.
    */
   function getDeclarationInfo(tokens) {
-    const typeDeclarations = new Set();
-    const valueDeclarations = new Set();
+    const typeDeclarations = /* @__PURE__ */ new Set();
+    const valueDeclarations = /* @__PURE__ */ new Set();
     for (let i = 0; i < tokens.tokens.length; i++) {
       const token = tokens.tokens[i];
       if (token.type === TokenType.name && isTopLevelDeclaration(token)) {
@@ -7744,47 +8714,361 @@ const transform=(()=>{
         }
       }
     }
-    return {typeDeclarations, valueDeclarations};
+
+    return { typeDeclarations, valueDeclarations };
   }
 
-  /**
-   * Common method sharing code between CJS and ESM cases, since they're the same here.
+    /**
+   * Determine information about this named import or named export specifier.
+   *
+   * This syntax is the `a` from statements like these:
+   * import {A} from "./foo";
+   * export {A};
+   * export {A} from "./foo";
+   *
+   * As it turns out, we can exactly characterize the syntax meaning by simply
+   * counting the number of tokens, which can be from 1 to 4:
+   * {A}
+   * {type A}
+   * {A as B}
+   * {type A as B}
+   *
+   * In the type case, we never actually need the names in practice, so don't get
+   * them.
+   *
+   * TODO: There's some redundancy with the type detection here and the isType
+   * flag that's already present on tokens in TS mode. This function could
+   * potentially be simplified and/or pushed to the call sites to avoid the object
+   * allocation.
    */
-  function shouldElideDefaultExport(
-    isTypeScriptTransformEnabled,
-    tokens,
-    declarationInfo,
-  ) {
-    if (!isTypeScriptTransformEnabled) {
-      return false;
+  function getImportExportSpecifierInfo(tokens, index = tokens.currentIndex()) {
+    let endIndex = index + 1;
+    if (isSpecifierEnd(tokens, endIndex)) {
+      // import {A}
+      const name = tokens.identifierNameAtIndex(index);
+      return {
+        isType: false,
+        leftName: name,
+        rightName: name,
+        endIndex
+      };
     }
-    const exportToken = tokens.currentToken();
-    if (exportToken.rhsEndIndex == null) {
-      throw new Error("Expected non-null rhsEndIndex on export token.");
+
+    endIndex++;
+    if (isSpecifierEnd(tokens, endIndex)) {
+      // import {type A}
+      return {
+        isType: true,
+        leftName: null,
+        rightName: null,
+        endIndex
+      };
     }
-    // The export must be of the form `export default a` or `export default a;`.
-    const numTokens = exportToken.rhsEndIndex - tokens.currentIndex();
-    if (
-      numTokens !== 3 &&
-      !(numTokens === 4 && tokens.matches1AtIndex(exportToken.rhsEndIndex - 1, TokenType.semi))
-    ) {
-      return false;
+
+    endIndex++;
+    if (isSpecifierEnd(tokens, endIndex)) {
+      // import {A as B}
+      return {
+        isType: false,
+        leftName: tokens.identifierNameAtIndex(index),
+        rightName: tokens.identifierNameAtIndex(index + 2),
+        endIndex
+      };
     }
-    const identifierToken = tokens.tokenAtRelativeIndex(2);
-    if (identifierToken.type !== TokenType.name) {
-      return false;
+
+    endIndex++;
+    if (isSpecifierEnd(tokens, endIndex)) {
+      // import {type A as B}
+      return {
+        isType: true,
+        leftName: null,
+        rightName: null,
+        endIndex
+      };
     }
-    const exportedName = tokens.identifierNameForToken(identifierToken);
-    return (
-      declarationInfo.typeDeclarations.has(exportedName) &&
-      !declarationInfo.valueDeclarations.has(exportedName)
-    );
+
+    throw new Error(`Unexpected import/export specifier at ${index}`);
   }
 
-  class Transformer {
+  function isSpecifierEnd(tokens, index) {
+    const token = tokens.tokens[index];
+    return token.type === TokenType.braceR || token.type === TokenType.comma;
+  }
+
+    // Use a Map rather than object to avoid unexpected __proto__ access.
+  var xhtml_default = /* @__PURE__ */ new Map([
+    ["quot", '"'],
+    ["amp", "&"],
+    ["apos", "'"],
+    ["lt", "<"],
+    ["gt", ">"],
+    ["nbsp", "\xA0"],
+    ["iexcl", "\xA1"],
+    ["cent", "\xA2"],
+    ["pound", "\xA3"],
+    ["curren", "\xA4"],
+    ["yen", "\xA5"],
+    ["brvbar", "\xA6"],
+    ["sect", "\xA7"],
+    ["uml", "\xA8"],
+    ["copy", "\xA9"],
+    ["ordf", "\xAA"],
+    ["laquo", "\xAB"],
+    ["not", "\xAC"],
+    ["shy", "\xAD"],
+    ["reg", "\xAE"],
+    ["macr", "\xAF"],
+    ["deg", "\xB0"],
+    ["plusmn", "\xB1"],
+    ["sup2", "\xB2"],
+    ["sup3", "\xB3"],
+    ["acute", "\xB4"],
+    ["micro", "\xB5"],
+    ["para", "\xB6"],
+    ["middot", "\xB7"],
+    ["cedil", "\xB8"],
+    ["sup1", "\xB9"],
+    ["ordm", "\xBA"],
+    ["raquo", "\xBB"],
+    ["frac14", "\xBC"],
+    ["frac12", "\xBD"],
+    ["frac34", "\xBE"],
+    ["iquest", "\xBF"],
+    ["Agrave", "\xC0"],
+    ["Aacute", "\xC1"],
+    ["Acirc", "\xC2"],
+    ["Atilde", "\xC3"],
+    ["Auml", "\xC4"],
+    ["Aring", "\xC5"],
+    ["AElig", "\xC6"],
+    ["Ccedil", "\xC7"],
+    ["Egrave", "\xC8"],
+    ["Eacute", "\xC9"],
+    ["Ecirc", "\xCA"],
+    ["Euml", "\xCB"],
+    ["Igrave", "\xCC"],
+    ["Iacute", "\xCD"],
+    ["Icirc", "\xCE"],
+    ["Iuml", "\xCF"],
+    ["ETH", "\xD0"],
+    ["Ntilde", "\xD1"],
+    ["Ograve", "\xD2"],
+    ["Oacute", "\xD3"],
+    ["Ocirc", "\xD4"],
+    ["Otilde", "\xD5"],
+    ["Ouml", "\xD6"],
+    ["times", "\xD7"],
+    ["Oslash", "\xD8"],
+    ["Ugrave", "\xD9"],
+    ["Uacute", "\xDA"],
+    ["Ucirc", "\xDB"],
+    ["Uuml", "\xDC"],
+    ["Yacute", "\xDD"],
+    ["THORN", "\xDE"],
+    ["szlig", "\xDF"],
+    ["agrave", "\xE0"],
+    ["aacute", "\xE1"],
+    ["acirc", "\xE2"],
+    ["atilde", "\xE3"],
+    ["auml", "\xE4"],
+    ["aring", "\xE5"],
+    ["aelig", "\xE6"],
+    ["ccedil", "\xE7"],
+    ["egrave", "\xE8"],
+    ["eacute", "\xE9"],
+    ["ecirc", "\xEA"],
+    ["euml", "\xEB"],
+    ["igrave", "\xEC"],
+    ["iacute", "\xED"],
+    ["icirc", "\xEE"],
+    ["iuml", "\xEF"],
+    ["eth", "\xF0"],
+    ["ntilde", "\xF1"],
+    ["ograve", "\xF2"],
+    ["oacute", "\xF3"],
+    ["ocirc", "\xF4"],
+    ["otilde", "\xF5"],
+    ["ouml", "\xF6"],
+    ["divide", "\xF7"],
+    ["oslash", "\xF8"],
+    ["ugrave", "\xF9"],
+    ["uacute", "\xFA"],
+    ["ucirc", "\xFB"],
+    ["uuml", "\xFC"],
+    ["yacute", "\xFD"],
+    ["thorn", "\xFE"],
+    ["yuml", "\xFF"],
+    ["OElig", "\u0152"],
+    ["oelig", "\u0153"],
+    ["Scaron", "\u0160"],
+    ["scaron", "\u0161"],
+    ["Yuml", "\u0178"],
+    ["fnof", "\u0192"],
+    ["circ", "\u02C6"],
+    ["tilde", "\u02DC"],
+    ["Alpha", "\u0391"],
+    ["Beta", "\u0392"],
+    ["Gamma", "\u0393"],
+    ["Delta", "\u0394"],
+    ["Epsilon", "\u0395"],
+    ["Zeta", "\u0396"],
+    ["Eta", "\u0397"],
+    ["Theta", "\u0398"],
+    ["Iota", "\u0399"],
+    ["Kappa", "\u039A"],
+    ["Lambda", "\u039B"],
+    ["Mu", "\u039C"],
+    ["Nu", "\u039D"],
+    ["Xi", "\u039E"],
+    ["Omicron", "\u039F"],
+    ["Pi", "\u03A0"],
+    ["Rho", "\u03A1"],
+    ["Sigma", "\u03A3"],
+    ["Tau", "\u03A4"],
+    ["Upsilon", "\u03A5"],
+    ["Phi", "\u03A6"],
+    ["Chi", "\u03A7"],
+    ["Psi", "\u03A8"],
+    ["Omega", "\u03A9"],
+    ["alpha", "\u03B1"],
+    ["beta", "\u03B2"],
+    ["gamma", "\u03B3"],
+    ["delta", "\u03B4"],
+    ["epsilon", "\u03B5"],
+    ["zeta", "\u03B6"],
+    ["eta", "\u03B7"],
+    ["theta", "\u03B8"],
+    ["iota", "\u03B9"],
+    ["kappa", "\u03BA"],
+    ["lambda", "\u03BB"],
+    ["mu", "\u03BC"],
+    ["nu", "\u03BD"],
+    ["xi", "\u03BE"],
+    ["omicron", "\u03BF"],
+    ["pi", "\u03C0"],
+    ["rho", "\u03C1"],
+    ["sigmaf", "\u03C2"],
+    ["sigma", "\u03C3"],
+    ["tau", "\u03C4"],
+    ["upsilon", "\u03C5"],
+    ["phi", "\u03C6"],
+    ["chi", "\u03C7"],
+    ["psi", "\u03C8"],
+    ["omega", "\u03C9"],
+    ["thetasym", "\u03D1"],
+    ["upsih", "\u03D2"],
+    ["piv", "\u03D6"],
+    ["ensp", "\u2002"],
+    ["emsp", "\u2003"],
+    ["thinsp", "\u2009"],
+    ["zwnj", "\u200C"],
+    ["zwj", "\u200D"],
+    ["lrm", "\u200E"],
+    ["rlm", "\u200F"],
+    ["ndash", "\u2013"],
+    ["mdash", "\u2014"],
+    ["lsquo", "\u2018"],
+    ["rsquo", "\u2019"],
+    ["sbquo", "\u201A"],
+    ["ldquo", "\u201C"],
+    ["rdquo", "\u201D"],
+    ["bdquo", "\u201E"],
+    ["dagger", "\u2020"],
+    ["Dagger", "\u2021"],
+    ["bull", "\u2022"],
+    ["hellip", "\u2026"],
+    ["permil", "\u2030"],
+    ["prime", "\u2032"],
+    ["Prime", "\u2033"],
+    ["lsaquo", "\u2039"],
+    ["rsaquo", "\u203A"],
+    ["oline", "\u203E"],
+    ["frasl", "\u2044"],
+    ["euro", "\u20AC"],
+    ["image", "\u2111"],
+    ["weierp", "\u2118"],
+    ["real", "\u211C"],
+    ["trade", "\u2122"],
+    ["alefsym", "\u2135"],
+    ["larr", "\u2190"],
+    ["uarr", "\u2191"],
+    ["rarr", "\u2192"],
+    ["darr", "\u2193"],
+    ["harr", "\u2194"],
+    ["crarr", "\u21B5"],
+    ["lArr", "\u21D0"],
+    ["uArr", "\u21D1"],
+    ["rArr", "\u21D2"],
+    ["dArr", "\u21D3"],
+    ["hArr", "\u21D4"],
+    ["forall", "\u2200"],
+    ["part", "\u2202"],
+    ["exist", "\u2203"],
+    ["empty", "\u2205"],
+    ["nabla", "\u2207"],
+    ["isin", "\u2208"],
+    ["notin", "\u2209"],
+    ["ni", "\u220B"],
+    ["prod", "\u220F"],
+    ["sum", "\u2211"],
+    ["minus", "\u2212"],
+    ["lowast", "\u2217"],
+    ["radic", "\u221A"],
+    ["prop", "\u221D"],
+    ["infin", "\u221E"],
+    ["ang", "\u2220"],
+    ["and", "\u2227"],
+    ["or", "\u2228"],
+    ["cap", "\u2229"],
+    ["cup", "\u222A"],
+    ["int", "\u222B"],
+    ["there4", "\u2234"],
+    ["sim", "\u223C"],
+    ["cong", "\u2245"],
+    ["asymp", "\u2248"],
+    ["ne", "\u2260"],
+    ["equiv", "\u2261"],
+    ["le", "\u2264"],
+    ["ge", "\u2265"],
+    ["sub", "\u2282"],
+    ["sup", "\u2283"],
+    ["nsub", "\u2284"],
+    ["sube", "\u2286"],
+    ["supe", "\u2287"],
+    ["oplus", "\u2295"],
+    ["otimes", "\u2297"],
+    ["perp", "\u22A5"],
+    ["sdot", "\u22C5"],
+    ["lceil", "\u2308"],
+    ["rceil", "\u2309"],
+    ["lfloor", "\u230A"],
+    ["rfloor", "\u230B"],
+    ["lang", "\u2329"],
+    ["rang", "\u232A"],
+    ["loz", "\u25CA"],
+    ["spades", "\u2660"],
+    ["clubs", "\u2663"],
+    ["hearts", "\u2665"],
+    ["diams", "\u2666"]
+  ]);
+
+    function getJSXPragmaInfo(options) {
+    const [base, suffix] = splitPragma(options.jsxPragma || "React.createElement");
+    const [fragmentBase, fragmentSuffix] = splitPragma(options.jsxFragmentPragma || "React.Fragment");
+    return { base, suffix, fragmentBase, fragmentSuffix };
+  }
+
+  function splitPragma(pragma) {
+    let dotIndex = pragma.indexOf(".");
+    if (dotIndex === -1) {
+      dotIndex = pragma.length;
+    }
+
+    return [pragma.slice(0, dotIndex), pragma.slice(dotIndex)];
+  }
+
+    class Transformer {
     // Return true if anything was processed, false otherwise.
-
-
     getPrefixCode() {
       return "";
     }
@@ -7796,59 +9080,731 @@ const transform=(()=>{
     getSuffixCode() {
       return "";
     }
-  }
+  };
 
-  function getJSXPragmaInfo(options) {
-    // todo tree-shake this away, but later. don't want to modify generated code right now.
-    // noinspection JSUnresolvedVariable
-    const [base, suffix] = splitPragma(options.jsxPragma || "React.createElement");
-    // noinspection JSUnresolvedVariable
-    const [fragmentBase, fragmentSuffix] = splitPragma(options.jsxFragmentPragma || "React.Fragment");
-    return {base, suffix, fragmentBase, fragmentSuffix};
-  }
-
-  function splitPragma(pragma) {
-    let dotIndex = pragma.indexOf(".");
-    if (dotIndex === -1) {
-      dotIndex = pragma.length;
+    class JSXTransformer extends Transformer {
+    // State for calculating the line number of each JSX tag in development.
+    __init() {
+      this.lastLineNumber = 1;
     }
-    return [pragma.slice(0, dotIndex), pragma.slice(dotIndex)];
-  }
 
+    __init2() {
+      this.lastIndex = 0;
+    }
+
+    // In development, variable name holding the name of the current file.
+    __init3() {
+      this.filenameVarName = null;
+    }
+
+    // Mapping of claimed names for imports in the automatic transform, e,g.
+    // {jsx: "_jsx"}. This determines which imports to generate in the prefix.
+    __init4() {
+      this.esmAutomaticImportNameResolutions = {};
+    }
+
+    // When automatically adding imports in CJS mode, we store the variable name
+    // holding the imported CJS module so we can require it in the prefix.
+    __init5() {
+      this.cjsAutomaticModuleNameResolutions = {};
+    }
+
+    constructor(rootTransformer, tokens, importProcessor, nameManager, options) {
+      super();
+      this.rootTransformer = rootTransformer;
+      this.tokens = tokens;
+      this.importProcessor = importProcessor;
+      this.nameManager = nameManager;
+      this.options = options;
+      JSXTransformer.prototype.__init.call(this);
+      JSXTransformer.prototype.__init2.call(this);
+      JSXTransformer.prototype.__init3.call(this);
+      JSXTransformer.prototype.__init4.call(this);
+      JSXTransformer.prototype.__init5.call(this);
+      ;
+      this.jsxPragmaInfo = getJSXPragmaInfo(options);
+      this.isAutomaticRuntime = options.jsxRuntime === "automatic";
+      this.jsxImportSource = options.jsxImportSource || "react";
+    }
+
+    process() {
+      if (this.tokens.matches1(TokenType.jsxTagStart)) {
+        this.processJSXTag();
+        return true;
+      }
+      return false;
+    }
+
+    getPrefixCode() {
+      let prefix = "";
+      if (this.filenameVarName) {
+        prefix += `const ${this.filenameVarName} = ${JSON.stringify(this.options.filePath || "")};`;
+      }
+      if (this.isAutomaticRuntime) {
+        if (this.importProcessor) {
+          // CJS mode: emit require statements for all modules that were referenced.
+          for (const [path, resolvedName] of Object.entries(this.cjsAutomaticModuleNameResolutions)) {
+            prefix += `var ${resolvedName} = require("${path}");`;
+          }
+        } else {
+          // ESM mode: consolidate and emit import statements for referenced names.
+          const { createElement: createElementResolution, ...otherResolutions } = this.esmAutomaticImportNameResolutions;
+          if (createElementResolution) {
+            prefix += `import {createElement as ${createElementResolution}} from "${this.jsxImportSource}";`;
+          }
+          const importSpecifiers = Object.entries(otherResolutions).map(([name, resolvedName]) => `${name} as ${resolvedName}`).join(", ");
+          if (importSpecifiers) {
+            const importPath = this.jsxImportSource + (this.options.production ? "/jsx-runtime" : "/jsx-dev-runtime");
+            prefix += `import {${importSpecifiers}} from "${importPath}";`;
+          }
+        }
+      }
+      return prefix;
+    }
+
+    processJSXTag() {
+      const { jsxRole, start } = this.tokens.currentToken();
+      // Calculate line number information at the very start (if in development
+      // mode) so that the information is guaranteed to be queried in token order.
+      const elementLocationCode = this.options.production ? null : this.getElementLocationCode(start);
+      if (this.isAutomaticRuntime && jsxRole !== JSXRole.KeyAfterPropSpread) {
+        this.transformTagToJSXFunc(elementLocationCode, jsxRole);
+      } else {
+        this.transformTagToCreateElement(elementLocationCode);
+      }
+    }
+
+    getElementLocationCode(firstTokenStart) {
+      const lineNumber = this.getLineNumberForIndex(firstTokenStart);
+      return `lineNumber: ${lineNumber}`;
+    }
+
+    /**
+     * Get the line number for this source position. This is calculated lazily and
+     * must be called in increasing order by index.
+     */
+    getLineNumberForIndex(index) {
+      const code = this.tokens.code;
+      while (this.lastIndex < index && this.lastIndex < code.length) {
+        if (code[this.lastIndex] === "\n") {
+          this.lastLineNumber++;
+        }
+        this.lastIndex++;
+      }
+      return this.lastLineNumber;
+    }
+
+    /**
+     * Convert the current JSX element to a call to jsx, jsxs, or jsxDEV. This is
+     * the primary transformation for the automatic transform.
+     *
+     * Example:
+     * <div a={1} key={2}>Hello{x}</div>
+     * becomes
+     * jsxs('div', {a: 1, children: ["Hello", x]}, 2)
+     */
+    transformTagToJSXFunc(elementLocationCode, jsxRole) {
+      const isStatic = jsxRole === JSXRole.StaticChildren;
+      // First tag is always jsxTagStart.
+      this.tokens.replaceToken(this.getJSXFuncInvocationCode(isStatic));
+      let keyCode = null;
+      if (this.tokens.matches1(TokenType.jsxTagEnd)) {
+        // Fragment syntax.
+        this.tokens.replaceToken(`${this.getFragmentCode()}, {`);
+        this.processAutomaticChildrenAndEndProps(jsxRole);
+      } else {
+        // Normal open tag or self-closing tag.
+        this.processTagIntro();
+        this.tokens.appendCode(", {");
+        keyCode = this.processProps(true);
+        if (this.tokens.matches2(TokenType.slash, TokenType.jsxTagEnd)) {
+          // Self-closing tag, no children to add, so close the props.
+          this.tokens.appendCode("}");
+        } else if (this.tokens.matches1(TokenType.jsxTagEnd)) {
+          // Tag with children.
+          this.tokens.removeToken();
+          this.processAutomaticChildrenAndEndProps(jsxRole);
+        } else {
+          throw new Error("Expected either /> or > at the end of the tag.");
+        }
+        // If a key was present, move it to its own arg. Note that moving code
+        // like this will cause line numbers to get out of sync within the JSX
+        // element if the key expression has a newline in it. This is unfortunate,
+        // but hopefully should be rare.
+        if (keyCode) {
+          this.tokens.appendCode(`, ${keyCode}`);
+        }
+      }
+      if (!this.options.production) {
+        // If the key wasn't already added, add it now so we can correctly set
+        // positional args for jsxDEV.
+        if (keyCode === null) {
+          this.tokens.appendCode(", void 0");
+        }
+        this.tokens.appendCode(`, ${isStatic}, ${this.getDevSource(elementLocationCode)}, this`);
+      }
+      // We're at the close-tag or the end of a self-closing tag, so remove
+      // everything else and close the function call.
+      this.tokens.removeInitialToken();
+      while (!this.tokens.matches1(TokenType.jsxTagEnd)) {
+        this.tokens.removeToken();
+      }
+      this.tokens.replaceToken(")");
+    }
+
+    /**
+     * Convert the current JSX element to a createElement call. In the classic
+     * runtime, this is the only case. In the automatic runtime, this is called
+     * as a fallback in some situations.
+     *
+     * Example:
+     * <div a={1} key={2}>Hello{x}</div>
+     * becomes
+     * React.createElement('div', {a: 1, key: 2}, "Hello", x)
+     */
+    transformTagToCreateElement(elementLocationCode) {
+      // First tag is always jsxTagStart.
+      this.tokens.replaceToken(this.getCreateElementInvocationCode());
+      if (this.tokens.matches1(TokenType.jsxTagEnd)) {
+        // Fragment syntax.
+        this.tokens.replaceToken(`${this.getFragmentCode()}, null`);
+        this.processChildren(true);
+      } else {
+        // Normal open tag or self-closing tag.
+        this.processTagIntro();
+        this.processPropsObjectWithDevInfo(elementLocationCode);
+        if (this.tokens.matches2(TokenType.slash, TokenType.jsxTagEnd)) {
+          // Self-closing tag; no children to process.
+        } else if (this.tokens.matches1(TokenType.jsxTagEnd)) {
+          // Tag with children and a close-tag; process the children as args.
+          this.tokens.removeToken();
+          this.processChildren(true);
+        } else {
+          throw new Error("Expected either /> or > at the end of the tag.");
+        }
+      }
+      // We're at the close-tag or the end of a self-closing tag, so remove
+      // everything else and close the function call.
+      this.tokens.removeInitialToken();
+      while (!this.tokens.matches1(TokenType.jsxTagEnd)) {
+        this.tokens.removeToken();
+      }
+      this.tokens.replaceToken(")");
+    }
+
+    /**
+     * Get the code for the relevant function for this context: jsx, jsxs,
+     * or jsxDEV. The following open-paren is included as well.
+     *
+     * These functions are only used for the automatic runtime, so they are always
+     * auto-imported, but the auto-import will be either CJS or ESM based on the
+     * target module format.
+     */
+    getJSXFuncInvocationCode(isStatic) {
+      if (this.options.production) {
+        if (isStatic) {
+          return this.claimAutoImportedFuncInvocation("jsxs", "/jsx-runtime");
+        } else {
+          return this.claimAutoImportedFuncInvocation("jsx", "/jsx-runtime");
+        }
+      } else {
+        return this.claimAutoImportedFuncInvocation("jsxDEV", "/jsx-dev-runtime");
+      }
+    }
+
+    /**
+     * Return the code to use for the createElement function, e.g.
+     * `React.createElement`, including the following open-paren.
+     *
+     * This is the main function to use for the classic runtime. For the
+     * automatic runtime, this function is used as a fallback function to
+     * preserve behavior when there is a prop spread followed by an explicit
+     * key. In that automatic runtime case, the function should be automatically
+     * imported.
+     */
+    getCreateElementInvocationCode() {
+      if (this.isAutomaticRuntime) {
+        return this.claimAutoImportedFuncInvocation("createElement", "");
+      } else {
+        const { jsxPragmaInfo } = this;
+        const resolvedPragmaBaseName = this.importProcessor ? this.importProcessor.getIdentifierReplacement(jsxPragmaInfo.base) || jsxPragmaInfo.base : jsxPragmaInfo.base;
+        return `${resolvedPragmaBaseName}${jsxPragmaInfo.suffix}(`;
+      }
+    }
+
+    /**
+     * Return the code to use as the component when compiling a shorthand
+     * fragment, e.g. `React.Fragment`.
+     *
+     * This may be called from either the classic or automatic runtime, and
+     * the value should be auto-imported for the automatic runtime.
+     */
+    getFragmentCode() {
+      if (this.isAutomaticRuntime) {
+        return this.claimAutoImportedName(
+          "Fragment",
+          this.options.production ? "/jsx-runtime" : "/jsx-dev-runtime"
+        );
+      } else {
+        const { jsxPragmaInfo } = this;
+        const resolvedFragmentPragmaBaseName = this.importProcessor ? this.importProcessor.getIdentifierReplacement(jsxPragmaInfo.fragmentBase) || jsxPragmaInfo.fragmentBase : jsxPragmaInfo.fragmentBase;
+        return resolvedFragmentPragmaBaseName + jsxPragmaInfo.fragmentSuffix;
+      }
+    }
+
+    /**
+     * Return code that invokes the given function.
+     *
+     * When the imports transform is enabled, use the CJSImportTransformer
+     * strategy of using `.call(void 0, ...` to avoid passing a `this` value in a
+     * situation that would otherwise look like a method call.
+     */
+    claimAutoImportedFuncInvocation(funcName, importPathSuffix) {
+      const funcCode = this.claimAutoImportedName(funcName, importPathSuffix);
+      if (this.importProcessor) {
+        return `${funcCode}.call(void 0, `;
+      } else {
+        return `${funcCode}(`;
+      }
+    }
+
+    claimAutoImportedName(funcName, importPathSuffix) {
+      if (this.importProcessor) {
+        // CJS mode: claim a name for the module and mark it for import.
+        const path = this.jsxImportSource + importPathSuffix;
+        if (!this.cjsAutomaticModuleNameResolutions[path]) {
+          this.cjsAutomaticModuleNameResolutions[path] = this.importProcessor.getFreeIdentifierForPath(path);
+        }
+        return `${this.cjsAutomaticModuleNameResolutions[path]}.${funcName}`;
+      } else {
+        // ESM mode: claim a name for this function and add it to the names that
+        // should be auto-imported when the prefix is generated.
+        if (!this.esmAutomaticImportNameResolutions[funcName]) {
+          this.esmAutomaticImportNameResolutions[funcName] = this.nameManager.claimFreeName(
+            `_${funcName}`
+          );
+        }
+        return this.esmAutomaticImportNameResolutions[funcName];
+      }
+    }
+
+    /**
+     * Process the first part of a tag, before any props.
+     */
+    processTagIntro() {
+      // Walk forward until we see one of these patterns:
+      // jsxName to start the first prop, preceded by another jsxName to end the tag name.
+      // jsxName to start the first prop, preceded by greaterThan to end the type argument.
+      // [open brace] to start the first prop.
+      // [jsxTagEnd] to end the open-tag.
+      // [slash, jsxTagEnd] to end the self-closing tag.
+      let introEnd = this.tokens.currentIndex() + 1;
+      while (this.tokens.tokens[introEnd].isType || !this.tokens.matches2AtIndex(introEnd - 1, TokenType.jsxName, TokenType.jsxName) && !this.tokens.matches2AtIndex(introEnd - 1, TokenType.greaterThan, TokenType.jsxName) && !this.tokens.matches1AtIndex(introEnd, TokenType.braceL) && !this.tokens.matches1AtIndex(introEnd, TokenType.jsxTagEnd) && !this.tokens.matches2AtIndex(introEnd, TokenType.slash, TokenType.jsxTagEnd)) {
+        introEnd++;
+      }
+      if (introEnd === this.tokens.currentIndex() + 1) {
+        const tagName = this.tokens.identifierName();
+        if (startsWithLowerCase(tagName)) {
+          this.tokens.replaceToken(`'${tagName}'`);
+        }
+      }
+      while (this.tokens.currentIndex() < introEnd) {
+        this.rootTransformer.processToken();
+      }
+    }
+
+    /**
+     * Starting at the beginning of the props, add the props argument to
+     * React.createElement, including the comma before it.
+     */
+    processPropsObjectWithDevInfo(elementLocationCode) {
+      const devProps = this.options.production ? "" : `__self: this, __source: ${this.getDevSource(elementLocationCode)}`;
+      if (!this.tokens.matches1(TokenType.jsxName) && !this.tokens.matches1(TokenType.braceL)) {
+        if (devProps) {
+          this.tokens.appendCode(`, {${devProps}}`);
+        } else {
+          this.tokens.appendCode(`, null`);
+        }
+        return;
+      }
+      this.tokens.appendCode(`, {`);
+      this.processProps(false);
+      if (devProps) {
+        this.tokens.appendCode(` ${devProps}}`);
+      } else {
+        this.tokens.appendCode("}");
+      }
+    }
+
+    /**
+     * Transform the core part of the props, assuming that a { has already been
+     * inserted before us and that a } will be inserted after us.
+     *
+     * If extractKeyCode is true (i.e. when using any jsx... function), any prop
+     * named "key" has its code captured and returned rather than being emitted to
+     * the output code. This shifts line numbers, and emitting the code later will
+     * correct line numbers again. If no key is found or if extractKeyCode is
+     * false, this function returns null.
+     */
+    processProps(extractKeyCode) {
+      let keyCode = null;
+      while (true) {
+        if (this.tokens.matches2(TokenType.jsxName, TokenType.eq)) {
+          // This is a regular key={value} or key="value" prop.
+          const propName = this.tokens.identifierName();
+          if (extractKeyCode && propName === "key") {
+            if (keyCode !== null) {
+              // The props list has multiple keys. Different implementations are
+              // inconsistent about what to do here: as of this writing, Babel and
+              // swc keep the *last* key and completely remove the rest, while
+              // TypeScript uses the *first* key and leaves the others as regular
+              // props. The React team collaborated with Babel on the
+              // implementation of this behavior, so presumably the Babel behavior
+              // is the one to use.
+              // Since we won't ever be emitting the previous key code, we need to
+              // at least emit its newlines here so that the line numbers match up
+              // in the long run.
+              this.tokens.appendCode(keyCode.replace(/[^\n]/g, ""));
+            }
+            // key
+            this.tokens.removeToken();
+            // =
+            this.tokens.removeToken();
+            const snapshot = this.tokens.snapshot();
+            this.processPropValue();
+            keyCode = this.tokens.dangerouslyGetAndRemoveCodeSinceSnapshot(snapshot);
+            // Don't add a comma
+            continue;
+          } else {
+            this.processPropName(propName);
+            this.tokens.replaceToken(": ");
+            this.processPropValue();
+          }
+        } else if (this.tokens.matches1(TokenType.jsxName)) {
+          // This is a shorthand prop like <input disabled />.
+          const propName = this.tokens.identifierName();
+          this.processPropName(propName);
+          this.tokens.appendCode(": true");
+        } else if (this.tokens.matches1(TokenType.braceL)) {
+          // This is prop spread, like <div {...getProps()}>, which we can pass
+          // through fairly directly as an object spread.
+          this.tokens.replaceToken("");
+          this.rootTransformer.processBalancedCode();
+          this.tokens.replaceToken("");
+        } else {
+          break;
+        }
+        this.tokens.appendCode(",");
+      }
+      return keyCode;
+    }
+
+    processPropName(propName) {
+      if (propName.includes("-")) {
+        this.tokens.replaceToken(`'${propName}'`);
+      } else {
+        this.tokens.copyToken();
+      }
+    }
+
+    processPropValue() {
+      if (this.tokens.matches1(TokenType.braceL)) {
+        this.tokens.replaceToken("");
+        this.rootTransformer.processBalancedCode();
+        this.tokens.replaceToken("");
+      } else if (this.tokens.matches1(TokenType.jsxTagStart)) {
+        this.processJSXTag();
+      } else {
+        this.processStringPropValue();
+      }
+    }
+
+    processStringPropValue() {
+      const token = this.tokens.currentToken();
+      const valueCode = this.tokens.code.slice(token.start + 1, token.end - 1);
+      const replacementCode = formatJSXTextReplacement(valueCode);
+      const literalCode = formatJSXStringValueLiteral(valueCode);
+      this.tokens.replaceToken(literalCode + replacementCode);
+    }
+
+    /**
+     * Starting in the middle of the props object literal, produce an additional
+     * prop for the children and close the object literal.
+     */
+    processAutomaticChildrenAndEndProps(jsxRole) {
+      if (jsxRole === JSXRole.StaticChildren) {
+        this.tokens.appendCode(" children: [");
+        this.processChildren(false);
+        this.tokens.appendCode("]}");
+      } else {
+        // The parser information tells us whether we will see a real child or if
+        // all remaining children (if any) will resolve to empty. If there are no
+        // non-empty children, don't emit a children prop at all, but still
+        // process children so that we properly transform the code into nothing.
+        if (jsxRole === JSXRole.OneChild) {
+          this.tokens.appendCode(" children: ");
+        }
+        this.processChildren(false);
+        this.tokens.appendCode("}");
+      }
+    }
+
+    /**
+     * Transform children into a comma-separated list, which will be either
+     * arguments to createElement or array elements of a children prop.
+     */
+    processChildren(needsInitialComma) {
+      let needsComma = needsInitialComma;
+      while (true) {
+        if (this.tokens.matches2(TokenType.jsxTagStart, TokenType.slash)) {
+          // Closing tag, so no more children.
+          return;
+        }
+        let didEmitElement = false;
+        if (this.tokens.matches1(TokenType.braceL)) {
+          if (this.tokens.matches2(TokenType.braceL, TokenType.braceR)) {
+            // Empty interpolations and comment-only interpolations are allowed
+            // and don't create an extra child arg.
+            this.tokens.replaceToken("");
+            this.tokens.replaceToken("");
+          } else {
+            // Interpolated expression.
+            this.tokens.replaceToken(needsComma ? ", " : "");
+            this.rootTransformer.processBalancedCode();
+            this.tokens.replaceToken("");
+            didEmitElement = true;
+          }
+        } else if (this.tokens.matches1(TokenType.jsxTagStart)) {
+          // Child JSX element
+          this.tokens.appendCode(needsComma ? ", " : "");
+          this.processJSXTag();
+          didEmitElement = true;
+        } else if (this.tokens.matches1(TokenType.jsxText) || this.tokens.matches1(TokenType.jsxEmptyText)) {
+          didEmitElement = this.processChildTextElement(needsComma);
+        } else {
+          throw new Error("Unexpected token when processing JSX children.");
+        }
+        if (didEmitElement) {
+          needsComma = true;
+        }
+      }
+    }
+
+    /**
+     * Turn a JSX text element into a string literal, or nothing at all if the JSX
+     * text resolves to the empty string.
+     *
+     * Returns true if a string literal is emitted, false otherwise.
+     */
+    processChildTextElement(needsComma) {
+      const token = this.tokens.currentToken();
+      const valueCode = this.tokens.code.slice(token.start, token.end);
+      const replacementCode = formatJSXTextReplacement(valueCode);
+      const literalCode = formatJSXTextLiteral(valueCode);
+      if (literalCode === '""') {
+        this.tokens.replaceToken(replacementCode);
+        return false;
+      } else {
+        this.tokens.replaceToken(`${needsComma ? ", " : ""}${literalCode}${replacementCode}`);
+        return true;
+      }
+    }
+
+    getDevSource(elementLocationCode) {
+      return `{fileName: ${this.getFilenameVarName()}, ${elementLocationCode}}`;
+    }
+
+    getFilenameVarName() {
+      if (!this.filenameVarName) {
+        this.filenameVarName = this.nameManager.claimFreeName("_jsxFileName");
+      }
+      return this.filenameVarName;
+    }
+  };
   /**
    * Spec for identifiers: https://tc39.github.io/ecma262/#prod-IdentifierStart.
    *
    * Really only treat anything starting with a-z as tag names.  `_`, `$`, `é`
-   * should be treated as copmonent names
+   * should be treated as component names
    */
   function startsWithLowerCase(s) {
     const firstChar = s.charCodeAt(0);
     return firstChar >= charCodes.lowercaseA && firstChar <= charCodes.lowercaseZ;
   }
 
-  function getNonTypeIdentifiers(tokens, options) {
+  /**
+   * Turn the given jsxText string into a JS string literal. Leading and trailing
+   * whitespace on lines is removed, except immediately after the open-tag and
+   * before the close-tag. Empty lines are completely removed, and spaces are
+   * added between lines after that.
+   *
+   * We use JSON.stringify to introduce escape characters as necessary, and trim
+   * the start and end of each line and remove blank lines.
+   */
+  function formatJSXTextLiteral(text) {
+    let result = "";
+    let whitespace = "";
+    let isInInitialLineWhitespace = false;
+    let seenNonWhitespace = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (c === " " || c === "	" || c === "\r") {
+        if (!isInInitialLineWhitespace) {
+          whitespace += c;
+        }
+      } else if (c === "\n") {
+        whitespace = "";
+        isInInitialLineWhitespace = true;
+      } else {
+        if (seenNonWhitespace && isInInitialLineWhitespace) {
+          result += " ";
+        }
+        result += whitespace;
+        whitespace = "";
+        if (c === "&") {
+          const { entity, newI } = processEntity(text, i + 1);
+          i = newI - 1;
+          result += entity;
+        } else {
+          result += c;
+        }
+        seenNonWhitespace = true;
+        isInInitialLineWhitespace = false;
+      }
+    }
+
+    if (!isInInitialLineWhitespace) {
+      result += whitespace;
+    }
+
+    return JSON.stringify(result);
+  }
+
+  /**
+   * Produce the code that should be printed after the JSX text string literal,
+   * with most content removed, but all newlines preserved and all spacing at the
+   * end preserved.
+   */
+  function formatJSXTextReplacement(text) {
+    let numNewlines = 0;
+    let numSpaces = 0;
+    for (const c of text) {
+      if (c === "\n") {
+        numNewlines++;
+        numSpaces = 0;
+      } else if (c === " ") {
+        numSpaces++;
+      }
+    }
+
+    return "\n".repeat(numNewlines) + " ".repeat(numSpaces);
+  }
+
+  /**
+   * Format a string in the value position of a JSX prop.
+   *
+   * Use the same implementation as convertAttribute from
+   * babel-helper-builder-react-jsx.
+   */
+  function formatJSXStringValueLiteral(text) {
+    let result = "";
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (c === "\n") {
+        if (/\s/.test(text[i + 1])) {
+          result += " ";
+          while (i < text.length && /\s/.test(text[i + 1])) {
+            i++;
+          }
+        } else {
+          result += "\n";
+        }
+      } else if (c === "&") {
+        const { entity, newI } = processEntity(text, i + 1);
+        result += entity;
+        i = newI - 1;
+      } else {
+        result += c;
+      }
+    }
+
+    return JSON.stringify(result);
+  }
+
+  /**
+   * Starting at a &, see if there's an HTML entity (specified by name, decimal
+   * char code, or hex char code) and return it if so.
+   *
+   * Modified from jsxReadString in babel-parser.
+   */
+  function processEntity(text, indexAfterAmpersand) {
+    let str = "";
+    let count = 0;
+    let entity;
+    let i = indexAfterAmpersand;
+    if (text[i] === "#") {
+      let radix = 10;
+      i++;
+      let numStart;
+      if (text[i] === "x") {
+        radix = 16;
+        i++;
+        numStart = i;
+        while (i < text.length && isHexDigit(text.charCodeAt(i))) {
+          i++;
+        }
+      } else {
+        numStart = i;
+        while (i < text.length && isDecimalDigit(text.charCodeAt(i))) {
+          i++;
+        }
+      }
+      if (text[i] === ";") {
+        const numStr = text.slice(numStart, i);
+        if (numStr) {
+          i++;
+          entity = String.fromCodePoint(parseInt(numStr, radix));
+        }
+      }
+    } else {
+      while (i < text.length && count++ < 10) {
+        const ch = text[i];
+        i++;
+        if (ch === ";") {
+          entity = xhtml_default.get(str);
+          break;
+        }
+        str += ch;
+      }
+    }
+
+    if (!entity) {
+      return { entity: "&", newI: indexAfterAmpersand };
+    }
+
+    return { entity, newI: i };
+  }
+
+  function isDecimalDigit(code) {
+    return code >= charCodes.digit0 && code <= charCodes.digit9;
+  }
+
+  function isHexDigit(code) {
+    return code >= charCodes.digit0 && code <= charCodes.digit9 || code >= charCodes.lowercaseA && code <= charCodes.lowercaseF || code >= charCodes.uppercaseA && code <= charCodes.uppercaseF;
+  }
+
+    function getNonTypeIdentifiers(tokens, options) {
     const jsxPragmaInfo = getJSXPragmaInfo(options);
-    const nonTypeIdentifiers = new Set();
+    const nonTypeIdentifiers = /* @__PURE__ */ new Set();
     for (let i = 0; i < tokens.tokens.length; i++) {
       const token = tokens.tokens[i];
-      if (
-        token.type === TokenType.name &&
-        !token.isType &&
-        (token.identifierRole === IdentifierRole.Access ||
-          token.identifierRole === IdentifierRole.ObjectShorthand ||
-          token.identifierRole === IdentifierRole.ExportAccess) &&
-        !token.shadowsGlobal
-      ) {
+      if (token.type === TokenType.name && !token.isType && (token.identifierRole === IdentifierRole.Access || token.identifierRole === IdentifierRole.ObjectShorthand || token.identifierRole === IdentifierRole.ExportAccess) && !token.shadowsGlobal) {
         nonTypeIdentifiers.add(tokens.identifierNameForToken(token));
       }
       if (token.type === TokenType.jsxTagStart) {
         nonTypeIdentifiers.add(jsxPragmaInfo.base);
       }
-      if (
-        token.type === TokenType.jsxTagStart &&
-        i + 1 < tokens.tokens.length &&
-        tokens.tokens[i + 1].type === TokenType.jsxTagEnd
-      ) {
+      if (token.type === TokenType.jsxTagStart && i + 1 < tokens.tokens.length && tokens.tokens[i + 1].type === TokenType.jsxTagEnd) {
         nonTypeIdentifiers.add(jsxPragmaInfo.base);
         nonTypeIdentifiers.add(jsxPragmaInfo.fragmentBase);
       }
@@ -7860,30 +9816,84 @@ const transform=(()=>{
         }
       }
     }
+
     return nonTypeIdentifiers;
   }
 
-  /**
+    /**
+   * Starting at `export {`, look ahead and return `true` if this is an
+   * `export {...} from` statement and `false` if this is a plain multi-export.
+   */
+  function isExportFrom(tokens) {
+    let closeBraceIndex = tokens.currentIndex();
+    while (!tokens.matches1AtIndex(closeBraceIndex, TokenType.braceR)) {
+      closeBraceIndex++;
+    }
+
+    return tokens.matchesContextualAtIndex(closeBraceIndex + 1, ContextualKeyword._from) && tokens.matches1AtIndex(closeBraceIndex + 2, TokenType.string);
+  }
+
+    /**
+   * Starting at a potential `with` or (legacy) `assert` token, remove the import
+   * attributes if they exist.
+   */
+  function removeMaybeImportAttributes(tokens) {
+    if (tokens.matches2(TokenType._with, TokenType.braceL) || tokens.matches2(TokenType.name, TokenType.braceL) && tokens.matchesContextual(ContextualKeyword._assert)) {
+      // assert
+      tokens.removeToken();
+      // {
+      tokens.removeToken();
+      tokens.removeBalancedCode();
+      // }
+      tokens.removeToken();
+    }
+  }
+
+    /**
+   * Common method sharing code between CJS and ESM cases, since they're the same here.
+   */
+  function shouldElideDefaultExport(isTypeScriptTransformEnabled, keepUnusedImports, tokens, declarationInfo) {
+    if (!isTypeScriptTransformEnabled || false) {
+      return false;
+    }
+
+    const exportToken = tokens.currentToken();
+    if (exportToken.rhsEndIndex == null) {
+      throw new Error("Expected non-null rhsEndIndex on export token.");
+    }
+
+    // The export must be of the form `export default a` or `export default a;`.
+    const numTokens = exportToken.rhsEndIndex - tokens.currentIndex();
+    if (numTokens !== 3 && !(numTokens === 4 && tokens.matches1AtIndex(exportToken.rhsEndIndex - 1, TokenType.semi))) {
+      return false;
+    }
+
+    const identifierToken = tokens.tokenAtRelativeIndex(2);
+    if (identifierToken.type !== TokenType.name) {
+      return false;
+    }
+
+    const exportedName = tokens.identifierNameForToken(identifierToken);
+    return declarationInfo.typeDeclarations.has(exportedName) && !declarationInfo.valueDeclarations.has(exportedName);
+  }
+
+    /**
    * Class for editing import statements when we are keeping the code as ESM. We still need to remove
    * type-only imports in TypeScript and Flow.
    */
   class ESMImportTransformer extends Transformer {
-
-
-
-    constructor(
-      tokens,
-      nameManager,
-      reactHotLoaderTransformer,
-      isTypeScriptTransformEnabled,
-      options,
-    ) {
-      super();this.tokens = tokens;this.nameManager = nameManager;this.reactHotLoaderTransformer = reactHotLoaderTransformer;this.isTypeScriptTransformEnabled = isTypeScriptTransformEnabled;    this.nonTypeIdentifiers = isTypeScriptTransformEnabled
-        ? getNonTypeIdentifiers(tokens, options)
-        : new Set();
-      this.declarationInfo = isTypeScriptTransformEnabled
-        ? getDeclarationInfo(tokens)
-        : EMPTY_DECLARATION_INFO;
+    constructor(tokens, nameManager, helperManager, isTypeScriptTransformEnabled, options) {
+      super();
+      this.tokens = tokens;
+      this.nameManager = nameManager;
+      this.helperManager = helperManager;
+      this.isTypeScriptTransformEnabled = isTypeScriptTransformEnabled;
+      this.isFlowTransformEnabled = false;
+      this.keepUnusedImports = false;
+      ;
+      this.nonTypeIdentifiers = isTypeScriptTransformEnabled && !false ? getNonTypeIdentifiers(tokens, options) : /* @__PURE__ */ new Set();
+      this.declarationInfo = isTypeScriptTransformEnabled && !false ? getDeclarationInfo(tokens) : EMPTY_DECLARATION_INFO;
+      this.injectCreateRequireForImportRequire = Boolean(options.injectCreateRequireForImportRequire);
     }
 
     process() {
@@ -7891,10 +9901,7 @@ const transform=(()=>{
       if (this.tokens.matches3(TokenType._import, TokenType.name, TokenType.eq)) {
         return this.processImportEquals();
       }
-      if (
-        this.tokens.matches4(TokenType._import, TokenType.name, TokenType.name, TokenType.eq) &&
-        this.tokens.matchesContextualAtIndex(this.tokens.currentIndex() + 1, ContextualKeyword._type)
-      ) {
+      if (this.tokens.matches4(TokenType._import, TokenType.name, TokenType.name, TokenType.eq) && this.tokens.matchesContextualAtIndex(this.tokens.currentIndex() + 1, ContextualKeyword._type)) {
         // import type T = require('T')
         this.tokens.removeInitialToken();
         // This construct is always exactly 8 tokens long, so remove the 7 remaining tokens.
@@ -7907,10 +9914,7 @@ const transform=(()=>{
         this.tokens.replaceToken("module.exports");
         return true;
       }
-      if (
-        this.tokens.matches5(TokenType._export, TokenType._import, TokenType.name, TokenType.name, TokenType.eq) &&
-        this.tokens.matchesContextualAtIndex(this.tokens.currentIndex() + 2, ContextualKeyword._type)
-      ) {
+      if (this.tokens.matches5(TokenType._export, TokenType._import, TokenType.name, TokenType.name, TokenType.eq) && this.tokens.matchesContextualAtIndex(this.tokens.currentIndex() + 2, ContextualKeyword._type)) {
         // export import type T = require('T')
         this.tokens.removeInitialToken();
         // This construct is always exactly 9 tokens long, so remove the 8 remaining tokens.
@@ -7928,24 +9932,34 @@ const transform=(()=>{
       if (this.tokens.matches2(TokenType._export, TokenType.braceL)) {
         return this.processNamedExports();
       }
-      if (
-        this.tokens.matches3(TokenType._export, TokenType.name, TokenType.braceL) &&
-        this.tokens.matchesContextualAtIndex(this.tokens.currentIndex() + 1, ContextualKeyword._type)
-      ) {
-        // TS `export type {` case: just remove the export entirely.
+      if (this.tokens.matches2(TokenType._export, TokenType.name) && this.tokens.matchesContextualAtIndex(this.tokens.currentIndex() + 1, ContextualKeyword._type)) {
+        // export type {a};
+        // export type {a as b};
+        // export type {a} from './b';
+        // export type * from './b';
+        // export type * as ns from './b';
         this.tokens.removeInitialToken();
-        while (!this.tokens.matches1(TokenType.braceR)) {
-          this.tokens.removeToken();
-        }
         this.tokens.removeToken();
-
+        if (this.tokens.matches1(TokenType.braceL)) {
+          while (!this.tokens.matches1(TokenType.braceR)) {
+            this.tokens.removeToken();
+          }
+          this.tokens.removeToken();
+        } else {
+          // *
+          this.tokens.removeToken();
+          if (this.tokens.matches1(TokenType._as)) {
+            // as
+            this.tokens.removeToken();
+            // ns
+            this.tokens.removeToken();
+          }
+        }
         // Remove type re-export `... } from './T'`
-        if (
-          this.tokens.matchesContextual(ContextualKeyword._from) &&
-          this.tokens.matches1AtIndex(this.tokens.currentIndex() + 1, TokenType.string)
-        ) {
+        if (this.tokens.matchesContextual(ContextualKeyword._from) && this.tokens.matches1AtIndex(this.tokens.currentIndex() + 1, TokenType.string)) {
           this.tokens.removeToken();
           this.tokens.removeToken();
+          removeMaybeImportAttributes(this.tokens);
         }
         return true;
       }
@@ -7954,11 +9968,22 @@ const transform=(()=>{
 
     processImportEquals() {
       const importName = this.tokens.identifierNameAtIndex(this.tokens.currentIndex() + 1);
-      if (this.isTypeName(importName)) {
+      if (this.shouldAutomaticallyElideImportedName(importName)) {
         // If this name is only used as a type, elide the whole import.
         elideImportEquals(this.tokens);
+      } else if (this.injectCreateRequireForImportRequire) {
+        // We're using require in an environment (Node ESM) that doesn't provide
+        // it as a global, so generate a helper to import it.
+        // import -> const
+        this.tokens.replaceToken("const");
+        // Foo
+        this.tokens.copyToken();
+        // =
+        this.tokens.copyToken();
+        // require
+        this.tokens.replaceToken(this.helperManager.getHelperName("require"));
       } else {
-        // Otherwise, switch `import` to `const`.
+        // Otherwise, just switch `import` to `const`.
         this.tokens.replaceToken("const");
       }
       return true;
@@ -7969,7 +9994,6 @@ const transform=(()=>{
         // Dynamic imports don't need to be transformed.
         return false;
       }
-
       const snapshot = this.tokens.snapshot();
       const allImportsRemoved = this.removeImportTypeBindings();
       if (allImportsRemoved) {
@@ -7978,6 +10002,7 @@ const transform=(()=>{
           this.tokens.removeToken();
         }
         this.tokens.removeToken();
+        removeMaybeImportAttributes(this.tokens);
         if (this.tokens.matches1(TokenType.semi)) {
           this.tokens.removeToken();
         }
@@ -7993,25 +10018,25 @@ const transform=(()=>{
      */
     removeImportTypeBindings() {
       this.tokens.copyExpectedToken(TokenType._import);
-      if (
-        this.tokens.matchesContextual(ContextualKeyword._type) &&
-        !this.tokens.matches1AtIndex(this.tokens.currentIndex() + 1, TokenType.comma) &&
-        !this.tokens.matchesContextualAtIndex(this.tokens.currentIndex() + 1, ContextualKeyword._from)
-      ) {
+      if (this.tokens.matchesContextual(ContextualKeyword._type) && !this.tokens.matches1AtIndex(this.tokens.currentIndex() + 1, TokenType.comma) && !this.tokens.matchesContextualAtIndex(this.tokens.currentIndex() + 1, ContextualKeyword._from)) {
         // This is an "import type" statement, so exit early.
         return true;
       }
-
       if (this.tokens.matches1(TokenType.string)) {
         // This is a bare import, so we should proceed with the import.
         this.tokens.copyToken();
         return false;
       }
-
+      // Skip the "module" token in import reflection.
+      if (this.tokens.matchesContextual(ContextualKeyword._module) && this.tokens.matchesContextualAtIndex(this.tokens.currentIndex() + 2, ContextualKeyword._from)) {
+        this.tokens.copyToken();
+      }
       let foundNonTypeImport = false;
-
+      let foundAnyNamedImport = false;
+      let needsComma = false;
+      // Handle default import.
       if (this.tokens.matches1(TokenType.name)) {
-        if (this.isTypeName(this.tokens.identifierName())) {
+        if (this.shouldAutomaticallyElideImportedName(this.tokens.identifierName())) {
           this.tokens.removeToken();
           if (this.tokens.matches1(TokenType.comma)) {
             this.tokens.removeToken();
@@ -8020,103 +10045,84 @@ const transform=(()=>{
           foundNonTypeImport = true;
           this.tokens.copyToken();
           if (this.tokens.matches1(TokenType.comma)) {
-            this.tokens.copyToken();
+            // We're in a statement like:
+            // import A, * as B from './A';
+            // or
+            // import A, {foo} from './A';
+            // where the `A` is being kept. The comma should be removed if an only
+            // if the next part of the import statement is elided, but that's hard
+            // to determine at this point in the code. Instead, always remove it
+            // and set a flag to add it back if necessary.
+            needsComma = true;
+            this.tokens.removeToken();
           }
         }
       }
-
       if (this.tokens.matches1(TokenType.star)) {
-        if (this.isTypeName(this.tokens.identifierNameAtIndex(this.tokens.currentIndex() + 2))) {
+        if (this.shouldAutomaticallyElideImportedName(this.tokens.identifierNameAtRelativeIndex(2))) {
           this.tokens.removeToken();
           this.tokens.removeToken();
           this.tokens.removeToken();
         } else {
+          if (needsComma) {
+            this.tokens.appendCode(",");
+          }
           foundNonTypeImport = true;
           this.tokens.copyExpectedToken(TokenType.star);
           this.tokens.copyExpectedToken(TokenType.name);
           this.tokens.copyExpectedToken(TokenType.name);
         }
       } else if (this.tokens.matches1(TokenType.braceL)) {
+        if (needsComma) {
+          this.tokens.appendCode(",");
+        }
         this.tokens.copyToken();
         while (!this.tokens.matches1(TokenType.braceR)) {
-          if (
-            this.tokens.matches3(TokenType.name, TokenType.name, TokenType.comma) ||
-            this.tokens.matches3(TokenType.name, TokenType.name, TokenType.braceR)
-          ) {
-            // type foo
-            this.tokens.removeToken();
-            this.tokens.removeToken();
+          foundAnyNamedImport = true;
+          const specifierInfo = getImportExportSpecifierInfo(this.tokens);
+          if (specifierInfo.isType || this.shouldAutomaticallyElideImportedName(specifierInfo.rightName)) {
+            while (this.tokens.currentIndex() < specifierInfo.endIndex) {
+              this.tokens.removeToken();
+            }
             if (this.tokens.matches1(TokenType.comma)) {
               this.tokens.removeToken();
-            }
-          } else if (
-            this.tokens.matches5(TokenType.name, TokenType.name, TokenType.name, TokenType.name, TokenType.comma) ||
-            this.tokens.matches5(TokenType.name, TokenType.name, TokenType.name, TokenType.name, TokenType.braceR)
-          ) {
-            // type foo as bar
-            this.tokens.removeToken();
-            this.tokens.removeToken();
-            this.tokens.removeToken();
-            this.tokens.removeToken();
-            if (this.tokens.matches1(TokenType.comma)) {
-              this.tokens.removeToken();
-            }
-          } else if (
-            this.tokens.matches2(TokenType.name, TokenType.comma) ||
-            this.tokens.matches2(TokenType.name, TokenType.braceR)
-          ) {
-            // foo
-            if (this.isTypeName(this.tokens.identifierName())) {
-              this.tokens.removeToken();
-              if (this.tokens.matches1(TokenType.comma)) {
-                this.tokens.removeToken();
-              }
-            } else {
-              foundNonTypeImport = true;
-              this.tokens.copyToken();
-              if (this.tokens.matches1(TokenType.comma)) {
-                this.tokens.copyToken();
-              }
-            }
-          } else if (
-            this.tokens.matches4(TokenType.name, TokenType.name, TokenType.name, TokenType.comma) ||
-            this.tokens.matches4(TokenType.name, TokenType.name, TokenType.name, TokenType.braceR)
-          ) {
-            // foo as bar
-            if (this.isTypeName(this.tokens.identifierNameAtIndex(this.tokens.currentIndex() + 2))) {
-              this.tokens.removeToken();
-              this.tokens.removeToken();
-              this.tokens.removeToken();
-              if (this.tokens.matches1(TokenType.comma)) {
-                this.tokens.removeToken();
-              }
-            } else {
-              foundNonTypeImport = true;
-              this.tokens.copyToken();
-              this.tokens.copyToken();
-              this.tokens.copyToken();
-              if (this.tokens.matches1(TokenType.comma)) {
-                this.tokens.copyToken();
-              }
             }
           } else {
-            throw new Error("Unexpected import form.");
+            foundNonTypeImport = true;
+            while (this.tokens.currentIndex() < specifierInfo.endIndex) {
+              this.tokens.copyToken();
+            }
+            if (this.tokens.matches1(TokenType.comma)) {
+              this.tokens.copyToken();
+            }
           }
         }
         this.tokens.copyExpectedToken(TokenType.braceR);
       }
-
-      return !foundNonTypeImport;
+      if (this.keepUnusedImports) {
+        return false;
+      }
+      if (this.isTypeScriptTransformEnabled) {
+        return !foundNonTypeImport;
+      } else if (this.isFlowTransformEnabled) {
+        // In Flow, unlike TS, `import {} from 'foo';` preserves the import.
+        return foundAnyNamedImport && !foundNonTypeImport;
+      } else {
+        return false;
+      }
     }
 
-    isTypeName(name) {
-      return this.isTypeScriptTransformEnabled && !this.nonTypeIdentifiers.has(name);
+    shouldAutomaticallyElideImportedName(name) {
+      return this.isTypeScriptTransformEnabled && !this.keepUnusedImports && !this.nonTypeIdentifiers.has(name);
     }
 
     processExportDefault() {
-      if (
-        shouldElideDefaultExport(this.isTypeScriptTransformEnabled, this.tokens, this.declarationInfo)
-      ) {
+      if (shouldElideDefaultExport(
+        this.isTypeScriptTransformEnabled,
+        this.keepUnusedImports,
+        this.tokens,
+        this.declarationInfo
+      )) {
         // If the exported value is just an identifier and should be elided by TypeScript
         // rules, then remove it entirely. It will always have the form `export default e`,
         // where `e` is an identifier.
@@ -8125,28 +10131,23 @@ const transform=(()=>{
         this.tokens.removeToken();
         return true;
       }
-
-      const alreadyHasName =
-        this.tokens.matches4(TokenType._export, TokenType._default, TokenType._function, TokenType.name) ||
-        // export default async function
-        (this.tokens.matches5(TokenType._export, TokenType._default, TokenType.name, TokenType._function, TokenType.name) &&
-          this.tokens.matchesContextualAtIndex(
-            this.tokens.currentIndex() + 2,
-            ContextualKeyword._async,
-          )) ||
-        this.tokens.matches4(TokenType._export, TokenType._default, TokenType._class, TokenType.name) ||
-        this.tokens.matches5(TokenType._export, TokenType._default, TokenType._abstract, TokenType._class, TokenType.name);
-
-      // todo tree-shake this away
-      if (!alreadyHasName && false /*this.reactHotLoaderTransformer*/) {
-        // code removed
-      }
+      const alreadyHasName = this.tokens.matches4(TokenType._export, TokenType._default, TokenType._function, TokenType.name) || // export default async function
+      this.tokens.matches5(TokenType._export, TokenType._default, TokenType.name, TokenType._function, TokenType.name) && this.tokens.matchesContextualAtIndex(
+        this.tokens.currentIndex() + 2,
+        ContextualKeyword._async
+      ) || this.tokens.matches4(TokenType._export, TokenType._default, TokenType._class, TokenType.name) || this.tokens.matches5(TokenType._export, TokenType._default, TokenType._abstract, TokenType._class, TokenType.name);
       return false;
     }
 
     /**
-     * In TypeScript, we need to remove named exports that were never declared or only declared as a
-     * type.
+     * Handle a statement with one of these forms:
+     * export {a, type b};
+     * export {c, type d} from 'foo';
+     *
+     * In both cases, any explicit type exports should be removed. In the first
+     * case, we also need to handle implicit export elision for names declared as
+     * types. In the second case, we must NOT do implicit named export elision,
+     * but we must remove the runtime import if all exports are type exports.
      */
     processNamedExports() {
       if (!this.isTypeScriptTransformEnabled) {
@@ -8154,28 +10155,22 @@ const transform=(()=>{
       }
       this.tokens.copyExpectedToken(TokenType._export);
       this.tokens.copyExpectedToken(TokenType.braceL);
-
+      const isReExport = isExportFrom(this.tokens);
+      let foundNonTypeExport = false;
       while (!this.tokens.matches1(TokenType.braceR)) {
-        if (!this.tokens.matches1(TokenType.name)) {
-          throw new Error("Expected identifier at the start of named export.");
-        }
-        if (this.shouldElideExportedName(this.tokens.identifierName())) {
-          while (
-            !this.tokens.matches1(TokenType.comma) &&
-            !this.tokens.matches1(TokenType.braceR) &&
-            !this.tokens.isAtEnd()
-            ) {
+        const specifierInfo = getImportExportSpecifierInfo(this.tokens);
+        if (specifierInfo.isType || !isReExport && this.shouldElideExportedName(specifierInfo.leftName)) {
+          // Type export, so remove all tokens, including any comma.
+          while (this.tokens.currentIndex() < specifierInfo.endIndex) {
             this.tokens.removeToken();
           }
           if (this.tokens.matches1(TokenType.comma)) {
             this.tokens.removeToken();
           }
         } else {
-          while (
-            !this.tokens.matches1(TokenType.comma) &&
-            !this.tokens.matches1(TokenType.braceR) &&
-            !this.tokens.isAtEnd()
-            ) {
+          // Non-type export, so copy all tokens, including any comma.
+          foundNonTypeExport = true;
+          while (this.tokens.currentIndex() < specifierInfo.endIndex) {
             this.tokens.copyToken();
           }
           if (this.tokens.matches1(TokenType.comma)) {
@@ -8184,30 +10179,164 @@ const transform=(()=>{
         }
       }
       this.tokens.copyExpectedToken(TokenType.braceR);
+      if (!this.keepUnusedImports && isReExport && !foundNonTypeExport) {
+        // This is a type-only re-export, so skip evaluating the other module. Technically this
+        // leaves the statement as `export {}`, but that's ok since that's a no-op.
+        this.tokens.removeToken();
+        this.tokens.removeToken();
+        removeMaybeImportAttributes(this.tokens);
+      }
       return true;
     }
 
     /**
      * ESM elides all imports with the rule that we only elide if we see that it's
-     * a type and never see it as a value. This is in contract to CJS, which
+     * a type and never see it as a value. This is in contrast to CJS, which
      * elides imports that are completely unknown.
      */
     shouldElideExportedName(name) {
-      return (
-        this.isTypeScriptTransformEnabled &&
-        this.declarationInfo.typeDeclarations.has(name) &&
-        !this.declarationInfo.valueDeclarations.has(name)
-      );
+      return this.isTypeScriptTransformEnabled && !this.keepUnusedImports && this.declarationInfo.typeDeclarations.has(name) && !this.declarationInfo.valueDeclarations.has(name);
     }
-  }
+  };
 
-// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar
-// Hard-code a list of reserved words rather than trying to use keywords or contextual keywords
-// from the parser, since currently there are various exceptions, like `package` being reserved
-// but unused and various contextual keywords being reserved. Note that we assume that all code
-// compiled by Sucrase is in a module, so strict mode words and await are all considered reserved
-// here.
-  const RESERVED_WORDS = new Set([
+    /**
+   * Implementation of babel-plugin-transform-react-display-name, which adds a
+   * display name to usages of React.createClass and createReactClass.
+   */
+  class ReactDisplayNameTransformer extends Transformer {
+    constructor(rootTransformer, tokens, importProcessor, options) {
+      super();
+      this.rootTransformer = rootTransformer;
+      this.tokens = tokens;
+      this.importProcessor = importProcessor;
+      this.options = options;
+      ;
+    }
+
+    process() {
+      const startIndex = this.tokens.currentIndex();
+      if (this.tokens.identifierName() === "createReactClass") {
+        const newName = this.importProcessor && this.importProcessor.getIdentifierReplacement("createReactClass");
+        if (newName) {
+          this.tokens.replaceToken(`(0, ${newName})`);
+        } else {
+          this.tokens.copyToken();
+        }
+        this.tryProcessCreateClassCall(startIndex);
+        return true;
+      }
+      if (this.tokens.matches3(TokenType.name, TokenType.dot, TokenType.name) && this.tokens.identifierName() === "React" && this.tokens.identifierNameAtIndex(this.tokens.currentIndex() + 2) === "createClass") {
+        const newName = this.importProcessor ? this.importProcessor.getIdentifierReplacement("React") || "React" : "React";
+        if (newName) {
+          this.tokens.replaceToken(newName);
+          this.tokens.copyToken();
+          this.tokens.copyToken();
+        } else {
+          this.tokens.copyToken();
+          this.tokens.copyToken();
+          this.tokens.copyToken();
+        }
+        this.tryProcessCreateClassCall(startIndex);
+        return true;
+      }
+      return false;
+    }
+
+    /**
+     * This is called with the token position at the open-paren.
+     */
+    tryProcessCreateClassCall(startIndex) {
+      const displayName = this.findDisplayName(startIndex);
+      if (!displayName) {
+        return;
+      }
+      if (this.classNeedsDisplayName()) {
+        this.tokens.copyExpectedToken(TokenType.parenL);
+        this.tokens.copyExpectedToken(TokenType.braceL);
+        this.tokens.appendCode(`displayName: '${displayName}',`);
+        this.rootTransformer.processBalancedCode();
+        this.tokens.copyExpectedToken(TokenType.braceR);
+        this.tokens.copyExpectedToken(TokenType.parenR);
+      }
+    }
+
+    findDisplayName(startIndex) {
+      if (startIndex < 2) {
+        return null;
+      }
+      if (this.tokens.matches2AtIndex(startIndex - 2, TokenType.name, TokenType.eq)) {
+        // This is an assignment (or declaration) and the LHS is either an identifier or a member
+        // expression ending in an identifier, so use that identifier name.
+        return this.tokens.identifierNameAtIndex(startIndex - 2);
+      }
+      if (startIndex >= 2 && this.tokens.tokens[startIndex - 2].identifierRole === IdentifierRole.ObjectKey) {
+        // This is an object literal value.
+        return this.tokens.identifierNameAtIndex(startIndex - 2);
+      }
+      if (this.tokens.matches2AtIndex(startIndex - 2, TokenType._export, TokenType._default)) {
+        return this.getDisplayNameFromFilename();
+      }
+      return null;
+    }
+
+    getDisplayNameFromFilename() {
+      const filePath = this.options.filePath || "unknown";
+      const pathSegments = filePath.split("/");
+      const filename = pathSegments[pathSegments.length - 1];
+      const dotIndex = filename.lastIndexOf(".");
+      const baseFilename = dotIndex === -1 ? filename : filename.slice(0, dotIndex);
+      if (baseFilename === "index" && pathSegments[pathSegments.length - 2]) {
+        return pathSegments[pathSegments.length - 2];
+      } else {
+        return baseFilename;
+      }
+    }
+
+    /**
+     * We only want to add a display name when this is a function call containing
+     * one argument, which is an object literal without `displayName` as an
+     * existing key.
+     */
+    classNeedsDisplayName() {
+      let index = this.tokens.currentIndex();
+      if (!this.tokens.matches2(TokenType.parenL, TokenType.braceL)) {
+        return false;
+      }
+      // The block starts on the {, and we expect any displayName key to be in
+      // that context. We need to ignore other other contexts to avoid matching
+      // nested displayName keys.
+      const objectStartIndex = index + 1;
+      const objectContextId = this.tokens.tokens[objectStartIndex].contextId;
+      if (objectContextId == null) {
+        throw new Error("Expected non-null context ID on object open-brace.");
+      }
+      for (; index < this.tokens.tokens.length; index++) {
+        const token = this.tokens.tokens[index];
+        if (token.type === TokenType.braceR && token.contextId === objectContextId) {
+          index++;
+          break;
+        }
+        if (this.tokens.identifierNameAtIndex(index) === "displayName" && this.tokens.tokens[index].identifierRole === IdentifierRole.ObjectKey && token.contextId === objectContextId) {
+          // We found a displayName key, so bail out.
+          return false;
+        }
+      }
+      if (index === this.tokens.tokens.length) {
+        throw new Error("Unexpected end of input when processing React class.");
+      }
+      // If we got this far, we know we have createClass with an object with no
+      // display name, so we want to proceed as long as that was the only argument.
+      return this.tokens.matches1AtIndex(index, TokenType.parenR) || this.tokens.matches2AtIndex(index, TokenType.comma, TokenType.parenR);
+    }
+  };
+
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar
+  // Hard-code a list of reserved words rather than trying to use keywords or contextual keywords
+  // from the parser, since currently there are various exceptions, like `package` being reserved
+  // but unused and various contextual keywords being reserved. Note that we assume that all code
+  // compiled by Sucrase is in a module, so strict mode words and await are all considered reserved
+  // here.
+  var RESERVED_WORDS = /* @__PURE__ */ new Set([
     // Reserved keywords as of ECMAScript 2015
     "break",
     "case",
@@ -8256,9 +10385,8 @@ const transform=(()=>{
     // Literals that cannot be used as identifiers
     "false",
     "null",
-    "true",
+    "true"
   ]);
-
   /**
    * Determine if the given name is a legal variable name.
    *
@@ -8270,42 +10398,34 @@ const transform=(()=>{
     if (name.length === 0) {
       return false;
     }
+
     if (!IS_IDENTIFIER_START[name.charCodeAt(0)]) {
       return false;
     }
+
     for (let i = 1; i < name.length; i++) {
       if (!IS_IDENTIFIER_CHAR[name.charCodeAt(i)]) {
         return false;
       }
     }
+
     return !RESERVED_WORDS.has(name);
   }
 
-  class TypeScriptTransformer extends Transformer {
-    constructor(
-      rootTransformer,
-      tokens,
-      isImportsTransformEnabled,
-    ) {
-      super();this.rootTransformer = rootTransformer;this.tokens = tokens;this.isImportsTransformEnabled = isImportsTransformEnabled;  }
+    class TypeScriptTransformer extends Transformer {
+    constructor(rootTransformer, tokens, isImportsTransformEnabled) {
+      super();
+      this.rootTransformer = rootTransformer;
+      this.tokens = tokens;
+      this.isImportsTransformEnabled = isImportsTransformEnabled;
+      ;
+    }
 
     process() {
-      if (
-        this.rootTransformer.processPossibleArrowParamEnd() ||
-        this.rootTransformer.processPossibleAsyncArrowWithTypeParams() ||
-        this.rootTransformer.processPossibleTypeRange()
-      ) {
+      if (this.rootTransformer.processPossibleArrowParamEnd() || this.rootTransformer.processPossibleAsyncArrowWithTypeParams() || this.rootTransformer.processPossibleTypeRange()) {
         return true;
       }
-      if (
-        this.tokens.matches1(TokenType._public) ||
-        this.tokens.matches1(TokenType._protected) ||
-        this.tokens.matches1(TokenType._private) ||
-        this.tokens.matches1(TokenType._abstract) ||
-        this.tokens.matches1(TokenType._readonly) ||
-        this.tokens.matches1(TokenType._override) ||
-        this.tokens.matches1(TokenType.nonNullAssertion)
-      ) {
+      if (this.tokens.matches1(TokenType._public) || this.tokens.matches1(TokenType._protected) || this.tokens.matches1(TokenType._private) || this.tokens.matches1(TokenType._abstract) || this.tokens.matches1(TokenType._readonly) || this.tokens.matches1(TokenType._override) || this.tokens.matches1(TokenType.nonNullAssertion)) {
         this.tokens.removeInitialToken();
         return true;
       }
@@ -8313,10 +10433,7 @@ const transform=(()=>{
         this.processEnum();
         return true;
       }
-      if (
-        this.tokens.matches2(TokenType._export, TokenType._enum) ||
-        this.tokens.matches3(TokenType._export, TokenType._const, TokenType._enum)
-      ) {
+      if (this.tokens.matches2(TokenType._export, TokenType._enum) || this.tokens.matches3(TokenType._export, TokenType._const, TokenType._enum)) {
         this.processEnum(true);
         return true;
       }
@@ -8360,13 +10477,9 @@ const transform=(()=>{
         if (this.tokens.matches1(TokenType.braceR)) {
           break;
         }
-        const {nameStringCode, variableName} = this.extractEnumKeyInfo(this.tokens.currentToken());
+        const { nameStringCode, variableName } = this.extractEnumKeyInfo(this.tokens.currentToken());
         this.tokens.removeInitialToken();
-
-        if (
-          this.tokens.matches3(TokenType.eq, TokenType.string, TokenType.comma) ||
-          this.tokens.matches3(TokenType.eq, TokenType.string, TokenType.braceR)
-        ) {
+        if (this.tokens.matches3(TokenType.eq, TokenType.string, TokenType.comma) || this.tokens.matches3(TokenType.eq, TokenType.string, TokenType.braceR)) {
           this.processStringLiteralEnumMember(enumName, nameStringCode, variableName);
         } else if (this.tokens.matches1(TokenType.eq)) {
           this.processExplicitValueEnumMember(enumName, nameStringCode, variableName);
@@ -8375,13 +10488,12 @@ const transform=(()=>{
             enumName,
             nameStringCode,
             variableName,
-            previousValueCode,
+            previousValueCode
           );
         }
         if (this.tokens.matches1(TokenType.comma)) {
           this.tokens.removeToken();
         }
-
         if (variableName != null) {
           previousValueCode = variableName;
         } else {
@@ -8415,13 +10527,13 @@ const transform=(()=>{
         const name = this.tokens.identifierNameForToken(nameToken);
         return {
           nameStringCode: `"${name}"`,
-          variableName: isIdentifier(name) ? name : null,
+          variableName: isIdentifier(name) ? name : null
         };
       } else if (nameToken.type === TokenType.string) {
         const name = this.tokens.stringValueForToken(nameToken);
         return {
           nameStringCode: this.tokens.code.slice(nameToken.start, nameToken.end),
-          variableName: isIdentifier(name) ? name : null,
+          variableName: isIdentifier(name) ? name : null
         };
       } else {
         throw new Error("Expected name or string at beginning of enum element.");
@@ -8445,11 +10557,7 @@ const transform=(()=>{
      * ->
      * MyEnum["some key"] = "some value";
      */
-    processStringLiteralEnumMember(
-      enumName,
-      nameStringCode,
-      variableName,
-    ) {
+    processStringLiteralEnumMember(enumName, nameStringCode, variableName) {
       if (variableName != null) {
         this.tokens.appendCode(`const ${variableName}`);
         // =
@@ -8492,16 +10600,11 @@ const transform=(()=>{
      * ->
      * MyEnum[MyEnum["some key"] = 1 + 1] = "some key";
      */
-    processExplicitValueEnumMember(
-      enumName,
-      nameStringCode,
-      variableName,
-    ) {
+    processExplicitValueEnumMember(enumName, nameStringCode, variableName) {
       const rhsEndIndex = this.tokens.currentToken().rhsEndIndex;
       if (rhsEndIndex == null) {
         throw new Error("Expected rhsEndIndex on enum assign.");
       }
-
       if (variableName != null) {
         this.tokens.appendCode(`const ${variableName}`);
         this.tokens.copyToken();
@@ -8509,7 +10612,7 @@ const transform=(()=>{
           this.rootTransformer.processToken();
         }
         this.tokens.appendCode(
-          `; ${enumName}[${enumName}[${nameStringCode}] = ${variableName}] = ${nameStringCode};`,
+          `; ${enumName}[${enumName}[${nameStringCode}] = ${variableName}] = ${nameStringCode};`
         );
       } else {
         this.tokens.appendCode(`${enumName}[${enumName}[${nameStringCode}]`);
@@ -8536,66 +10639,63 @@ const transform=(()=>{
      * ->
      * MyEnum[MyEnum["some key 2"] = someKey1 + 1] = "some key 2";
      */
-    processImplicitValueEnumMember(
-      enumName,
-      nameStringCode,
-      variableName,
-      previousValueCode,
-    ) {
+    processImplicitValueEnumMember(enumName, nameStringCode, variableName, previousValueCode) {
       let valueCode = previousValueCode != null ? `${previousValueCode} + 1` : "0";
       if (variableName != null) {
         this.tokens.appendCode(`const ${variableName} = ${valueCode}; `);
         valueCode = variableName;
       }
       this.tokens.appendCode(
-        `${enumName}[${enumName}[${nameStringCode}] = ${valueCode}] = ${nameStringCode};`,
+        `${enumName}[${enumName}[${nameStringCode}] = ${valueCode}] = ${nameStringCode};`
       );
     }
-  }
+  };
 
-  class RootTransformer {
-    __init() {this.transformers = [];}
+    class RootTransformer {
+    __init() {
+      this.transformers = [];
+    }
 
+    __init2() {
+      this.generatedVariables = [];
+    }
 
-    __init2() {this.generatedVariables = [];}
-
-
-
-
-
-    constructor(
-      sucraseContext,
-      transforms,
-      enableLegacyBabel5ModuleInterop,
-      options,
-    ) {RootTransformer.prototype.__init.call(this);RootTransformer.prototype.__init2.call(this);
+    constructor(sucraseContext, transforms, enableLegacyBabel5ModuleInterop, options) {
+      RootTransformer.prototype.__init.call(this);
+      RootTransformer.prototype.__init2.call(this);
       this.nameManager = sucraseContext.nameManager;
       this.helperManager = sucraseContext.helperManager;
-      const {tokenProcessor, importProcessor} = sucraseContext;
+      const { tokenProcessor, importProcessor } = sucraseContext;
       this.tokens = tokenProcessor;
-      this.isImportsTransformEnabled = false;//transforms.includes("imports");
-      this.isReactHotLoaderTransformEnabled = false;//transforms.includes("react-hot-loader");
-      this.disableESTransforms = true; //Boolean(options.disableESTransforms);
-
-      let reactHotLoaderTransformer = null;
-
-      // Note that we always want to enable the imports transformer, even when the import transform
-      // itself isn't enabled, since we need to do type-only import pruning for both Flow and
-      // TypeScript.
-      {
+      this.isImportsTransformEnabled = false;
+      this.isReactHotLoaderTransformEnabled = false;
+      this.disableESTransforms = true;
+      if (transforms.includes("jsx")) {
+        if (options.jsxRuntime !== "preserve") {
+          this.transformers.push(
+            new JSXTransformer(this, tokenProcessor, importProcessor, this.nameManager, options)
+          );
+        }
+        this.transformers.push(
+          new ReactDisplayNameTransformer(this, tokenProcessor, importProcessor, options)
+        );
+      }
+            {
         this.transformers.push(
           new ESMImportTransformer(
             tokenProcessor,
             this.nameManager,
-            reactHotLoaderTransformer,
+            this.helperManager,
             transforms.includes("typescript"),
-            options,
-          ),
+            transforms.includes("flow"),
+            Boolean(options.false),
+            options
+          )
         );
       }
       if (transforms.includes("typescript")) {
         this.transformers.push(
-          new TypeScriptTransformer(this, tokenProcessor, transforms.includes("imports")),
+          new TypeScriptTransformer(this, tokenProcessor, transforms.includes("imports"))
         );
       }
     }
@@ -8603,8 +10703,9 @@ const transform=(()=>{
     transform() {
       this.tokens.reset();
       this.processBalancedCode();
+      const shouldAddUseStrict = this.isImportsTransformEnabled;
       // "use strict" always needs to be first, so override the normal transformer order.
-      let prefix = "";
+      let prefix = shouldAddUseStrict ? '"use strict";' : "";
       for (const transformer of this.transformers) {
         prefix += transformer.getPrefixCode();
       }
@@ -8617,16 +10718,25 @@ const transform=(()=>{
       for (const transformer of this.transformers) {
         suffix += transformer.getSuffixCode();
       }
-      let code = this.tokens.finish();
+      const result = this.tokens.finish();
+      let { code } = result;
       if (code.startsWith("#!")) {
         let newlineIndex = code.indexOf("\n");
         if (newlineIndex === -1) {
           newlineIndex = code.length;
           code += "\n";
         }
-        return code.slice(0, newlineIndex + 1) + prefix + code.slice(newlineIndex + 1) + suffix;
+        return {
+          code: code.slice(0, newlineIndex + 1) + prefix + code.slice(newlineIndex + 1) + suffix,
+          // The hashbang line has no tokens, so shifting the tokens to account
+          // for prefix can happen normally.
+          mappings: this.shiftMappings(result.mappings, prefix.length)
+        };
       } else {
-        return prefix + this.tokens.finish() + suffix;
+        return {
+          code: prefix + code + suffix,
+          mappings: this.shiftMappings(result.mappings, prefix.length)
+        };
       }
     }
 
@@ -8681,21 +10791,16 @@ const transform=(()=>{
     }
 
     processClass() {
-      const classInfo = getClassInfo(this, this.tokens, this.nameManager);
-
+      const classInfo = getClassInfo(this, this.tokens, this.nameManager, this.disableESTransforms);
       // Both static and instance initializers need a class name to use to invoke the initializer, so
       // assign to one if necessary.
-      const needsCommaExpression =
-        (classInfo.headerInfo.isExpression || !classInfo.headerInfo.className) &&
-        classInfo.staticInitializerNames.length + classInfo.instanceInitializerNames.length > 0;
-
+      const needsCommaExpression = (classInfo.headerInfo.isExpression || !classInfo.headerInfo.className) && classInfo.staticInitializerNames.length + classInfo.instanceInitializerNames.length > 0;
       let className = classInfo.headerInfo.className;
       if (needsCommaExpression) {
         className = this.nameManager.claimFreeName("_class");
         this.generatedVariables.push(className);
         this.tokens.appendCode(` (${className} =`);
       }
-
       const classToken = this.tokens.currentToken();
       const contextId = classToken.contextId;
       if (contextId == null) {
@@ -8705,15 +10810,13 @@ const transform=(()=>{
       while (!this.tokens.matchesContextIdAndLabel(TokenType.braceL, contextId)) {
         this.processToken();
       }
-
       this.processClassBody(classInfo, className);
-
       const staticInitializerStatements = classInfo.staticInitializerNames.map(
-        (name) => `${className}.${name}()`,
+        (name) => `${className}.${name}()`
       );
       if (needsCommaExpression) {
         this.tokens.appendCode(
-          `, ${staticInitializerStatements.map((s) => `${s}, `).join("")}${className})`,
+          `, ${staticInitializerStatements.map((s) => `${s}, `).join("")}${className})`
         );
       } else if (classInfo.staticInitializerNames.length > 0) {
         this.tokens.appendCode(` ${staticInitializerStatements.map((s) => `${s};`).join(" ")}`);
@@ -8731,7 +10834,7 @@ const transform=(()=>{
         constructorInitializerStatements,
         fields,
         instanceInitializerNames,
-        rangesToRemove,
+        rangesToRemove
       } = classInfo;
       let fieldIndex = 0;
       let rangeToRemoveIndex = 0;
@@ -8740,26 +10843,27 @@ const transform=(()=>{
         throw new Error("Expected non-null context ID on class.");
       }
       this.tokens.copyExpectedToken(TokenType.braceL);
-
-      const needsConstructorInit =
-        constructorInitializerStatements.length + instanceInitializerNames.length > 0;
-
+      if (this.isReactHotLoaderTransformEnabled) {
+        this.tokens.appendCode(
+          "__reactstandin__regenerateByEval(key, code) {this[key] = eval(code);}"
+        );
+      }
+      const needsConstructorInit = constructorInitializerStatements.length + instanceInitializerNames.length > 0;
       if (constructorInsertPos === null && needsConstructorInit) {
         const constructorInitializersCode = this.makeConstructorInitCode(
           constructorInitializerStatements,
           instanceInitializerNames,
-          className,
+          className
         );
         if (headerInfo.hasSuperclass) {
           const argsName = this.nameManager.claimFreeName("args");
           this.tokens.appendCode(
-            `constructor(...${argsName}) { super(...${argsName}); ${constructorInitializersCode}; }`,
+            `constructor(...${argsName}) { super(...${argsName}); ${constructorInitializersCode}; }`
           );
         } else {
           this.tokens.appendCode(`constructor() { ${constructorInitializersCode}; }`);
         }
       }
-
       while (!this.tokens.matchesContextIdAndLabel(TokenType.braceR, classContextId)) {
         if (fieldIndex < fields.length && this.tokens.currentIndex() === fields[fieldIndex].start) {
           let needsCloseBrace = false;
@@ -8779,10 +10883,7 @@ const transform=(()=>{
           }
           this.tokens.appendCode("}");
           fieldIndex++;
-        } else if (
-          rangeToRemoveIndex < rangesToRemove.length &&
-          this.tokens.currentIndex() >= rangesToRemove[rangeToRemoveIndex].start
-        ) {
+        } else if (rangeToRemoveIndex < rangesToRemove.length && this.tokens.currentIndex() >= rangesToRemove[rangeToRemoveIndex].start) {
           if (this.tokens.currentIndex() < rangesToRemove[rangeToRemoveIndex].end) {
             this.tokens.removeInitialToken();
           }
@@ -8797,8 +10898,8 @@ const transform=(()=>{
               `;${this.makeConstructorInitCode(
                 constructorInitializerStatements,
                 instanceInitializerNames,
-                className,
-              )};`,
+                className
+              )};`
             );
           }
           this.processToken();
@@ -8809,14 +10910,10 @@ const transform=(()=>{
       this.tokens.copyExpectedToken(TokenType.braceR);
     }
 
-    makeConstructorInitCode(
-      constructorInitializerStatements,
-      instanceInitializerNames,
-      className,
-    ) {
+    makeConstructorInitCode(constructorInitializerStatements, instanceInitializerNames, className) {
       return [
         ...constructorInitializerStatements,
-        ...instanceInitializerNames.map((name) => `${className}.prototype.${name}.call(this)`),
+        ...instanceInitializerNames.map((name) => `${className}.prototype.${name}.call(this)`)
       ].join(";");
     }
 
@@ -8857,17 +10954,13 @@ const transform=(()=>{
      * move the open-paren earlier.
      */
     processPossibleAsyncArrowWithTypeParams() {
-      if (
-        !this.tokens.matchesContextual(ContextualKeyword._async) &&
-        !this.tokens.matches1(TokenType._async)
-      ) {
+      if (!this.tokens.matchesContextual(ContextualKeyword._async) && !this.tokens.matches1(TokenType._async)) {
         return false;
       }
-      const nextToken = this.tokens.tokenAtRelativeIndex(1);
-      if (nextToken.type !== TokenType.lessThan || !nextToken.isType) {
+      const nextToken2 = this.tokens.tokenAtRelativeIndex(1);
+      if (nextToken2.type !== TokenType.lessThan || !nextToken2.isType) {
         return false;
       }
-
       let nextNonTypeIndex = this.tokens.currentIndex() + 1;
       // Look ahead to see if this is an arrow function or something else.
       while (this.tokens.tokens[nextNonTypeIndex].isType) {
@@ -8899,9 +10992,21 @@ const transform=(()=>{
       }
       return false;
     }
-  }
 
-  /**
+    shiftMappings(mappings, prefixLength) {
+      for (let i = 0; i < mappings.length; i++) {
+        const mapping = mappings[i];
+        if (mapping !== void 0) {
+          mappings[i] = mapping + prefixLength;
+        }
+      }
+      return mappings;
+    }
+  };
+
+    var import_lines_and_columns = __toESM(require_build());
+
+    /**
    * Special case code to scan for imported names in ESM TypeScript. We need to do this so we can
    * properly get globals so we can compute shadowed globals.
    *
@@ -8909,25 +11014,18 @@ const transform=(()=>{
    * replacement and flow type imports.
    */
   function getTSImportedNames(tokens) {
-    const importedNames = new Set();
+    const importedNames = /* @__PURE__ */ new Set();
     for (let i = 0; i < tokens.tokens.length; i++) {
-      if (
-        tokens.matches1AtIndex(i, TokenType._import) &&
-        !tokens.matches3AtIndex(i, TokenType._import, TokenType.name, TokenType.eq)
-      ) {
+      if (tokens.matches1AtIndex(i, TokenType._import) && !tokens.matches3AtIndex(i, TokenType._import, TokenType.name, TokenType.eq)) {
         collectNamesForImport(tokens, i, importedNames);
       }
     }
+
     return importedNames;
   }
 
-  function collectNamesForImport(
-    tokens,
-    index,
-    importedNames,
-  ) {
+  function collectNamesForImport(tokens, index, importedNames) {
     index++;
-
     if (tokens.matches1AtIndex(index, TokenType.parenL)) {
       // Dynamic import, so nothing to do
       return;
@@ -8954,26 +11052,16 @@ const transform=(()=>{
     }
   }
 
-  function collectNamesForNamedImport(
-    tokens,
-    index,
-    importedNames,
-  ) {
+  function collectNamesForNamedImport(tokens, index, importedNames) {
     while (true) {
       if (tokens.matches1AtIndex(index, TokenType.braceR)) {
         return;
       }
-
-      // We care about the local name, which might be the first token, or if there's an "as", is the
-      // one after that.
-      let name = tokens.identifierNameAtIndex(index);
-      index++;
-      if (tokens.matchesContextualAtIndex(index, ContextualKeyword._as)) {
-        index++;
-        name = tokens.identifierNameAtIndex(index);
-        index++;
+      const specifierInfo = getImportExportSpecifierInfo(tokens, index);
+      index = specifierInfo.endIndex;
+      if (!specifierInfo.isType) {
+        importedNames.add(specifierInfo.rightName);
       }
-      importedNames.add(name);
       if (tokens.matches2AtIndex(index, TokenType.comma, TokenType.braceR)) {
         return;
       } else if (tokens.matches1AtIndex(index, TokenType.braceR)) {
@@ -8986,16 +11074,16 @@ const transform=(()=>{
     }
   }
 
-  function transform(code, options) {
+    function transform(code, options) {
     try {
       const sucraseContext = getSucraseContext(code, options);
       const transformer = new RootTransformer(
         sucraseContext,
         options.transforms,
         false,
-        options,
+        options
       );
-      return {code: transformer.transform()};
+      return transformer.transform();
     } catch (e) {
       if (options.filePath) {
         e.message = `Error transforming ${options.filePath}: ${e.message}`;
@@ -9005,44 +11093,36 @@ const transform=(()=>{
   }
 
   /**
-   * Call into the parser/tokenizer and do some further preprocessing:
-   * - Come up with a set of used names so that we can assign new names.
-   * - Preprocess all import/export statements so we know which globals we are interested in.
-   * - Compute situations where any of those globals are shadowed.
-   *
-   * In the future, some of these preprocessing steps can be skipped based on what actual work is
-   * being done.
+   * Return a string representation of the sucrase tokens, mostly useful for
+   * diagnostic purposes.
    */
   function getSucraseContext(code, options) {
-    const isFlowEnabled = false;
+    const isFlowEnabled2 = false;
     const disableESTransforms = true;
     const file = parse(code);
     const tokens = file.tokens;
     const scopes = file.scopes;
-
     const nameManager = new NameManager(code, tokens);
     const helperManager = new HelperManager(nameManager);
     const tokenProcessor = new TokenProcessor(
       code,
       tokens,
-      isFlowEnabled,
-      disableESTransforms,
-      helperManager,
+      isFlowEnabled2,
+      true,
+      helperManager
     );
-//  const enableLegacyTypeScriptModuleInterop = Boolean(options.enableLegacyTypeScriptModuleInterop);
-
     let importProcessor = null;
-
-    if (options.transforms.includes("typescript")) {
-      identifyShadowedGlobals(tokenProcessor, scopes, getTSImportedNames(tokenProcessor));
-    }
-    return {tokenProcessor, scopes, nameManager, importProcessor, helperManager};
+    identifyShadowedGlobals(tokenProcessor, scopes, getTSImportedNames(tokenProcessor));
+    return { tokenProcessor, scopes, nameManager, importProcessor, helperManager };
   }
 
-  return transform;
+  // src/_entry.mjs
+  globalThis.__sucrase_transform__ = transform;
+
+return globalThis.__sucrase_transform__;
 })();
 
-// END sucrase@3.21.0
+// END sucrase@3.35.1
 importInProgress = performNodeImports();
 
 importInProgress
